@@ -2,6 +2,7 @@ import threading
 import time
 import webview
 import uvicorn
+import multiprocessing
 from main import app
 
 def start_server():
@@ -9,6 +10,8 @@ def start_server():
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="error")
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
+    
     # Run the server in a separate thread
     server_thread = threading.Thread(target=start_server, daemon=True)
     server_thread.start()
