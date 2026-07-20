@@ -53,14 +53,14 @@ export default function Home() {
     formData.append("file", selectedFile);
 
     try {
-      const res = await fetch("http://localhost:8000/api/upload", {
+      const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
       if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       setVideoId(data.video_id);
-      setVideoUrl(`http://localhost:8000${data.url}`);
+      setVideoUrl(data.url);
     } catch (err) {
       console.error(err);
       setErrorMsg("Помилка завантаження. Переконайтеся, що backend запущено.");
@@ -72,7 +72,7 @@ export default function Home() {
     if (!videoId) return;
     setIsGenerating(true);
     try {
-      const res = await fetch("http://localhost:8000/api/generate", {
+      const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ video_id: videoId, language }),
@@ -91,7 +91,7 @@ export default function Home() {
     setErrorMsg(null);
     if (!videoId || segments.length === 0) return;
     try {
-      const res = await fetch("http://localhost:8000/api/export", {
+      const res = await fetch("/api/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -103,7 +103,7 @@ export default function Home() {
       if (!res.ok) throw new Error("Export failed");
       const data = await res.json();
       if (data.status === "success") {
-        window.open(`http://localhost:8000${data.url}`, "_blank");
+        window.open(data.url, "_blank");
       }
     } catch (err) {
       console.error(err);

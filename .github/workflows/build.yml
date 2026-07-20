@@ -1,0 +1,56 @@
+name: Build Desktop App
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Build Next.js Frontend
+      run: |
+        cd frontend
+        npm install
+        npm run build
+        
+    - name: Install Python Dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pywebview pyinstaller imageio-ffmpeg
+        
+    - name: Build Executable with PyInstaller
+      run: |
+        cd backend
+        pyinstaller --noconfirm --onedir --windowed --add-data "../frontend/out;frontend/out" --name "AutoCaps" desktop.py
+        
+    - name: Zip Release
+      run: |
+        cd backend/dist
+        Compress-Archive -Path AutoCaps -DestinationPath AutoCaps-Windows.zip
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+      with:
+        tag_name: "v1.0.${{ github.run_number }}"
+        name: "AutoCaps Desktop App (Windows)"
+        files: backend/dist/AutoCaps-Windows.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
