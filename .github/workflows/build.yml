@@ -35,12 +35,12 @@ jobs:
         cd backend
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pywebview pyinstaller imageio-ffmpeg
+        pip install imageio-ffmpeg pyinstaller
         
     - name: Build Executable with PyInstaller
       run: |
         cd backend
-        pyinstaller --noconfirm --onedir --windowed --add-data "../frontend/out;frontend/out" --collect-all pywebview --collect-all clr_loader --collect-all pythonnet --collect-all faster_whisper --collect-all ctranslate2 --name "AutoCaps" desktop.py
+        pyinstaller --noconfirm --onedir --windowed --add-data "../frontend/out;frontend/out" --collect-all faster_whisper --collect-all ctranslate2 --name "AutoCaps" desktop.py
         
     - name: Zip Release
       run: |
