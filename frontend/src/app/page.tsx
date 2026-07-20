@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { UploadCloud, Video, Settings, Wand2, Download, Play, Pause, Palette, Type, AlignCenter } from "lucide-react";
+import { UploadCloud, Video, Settings, Wand2, Download, Palette, Type, AlignCenter } from "lucide-react";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
