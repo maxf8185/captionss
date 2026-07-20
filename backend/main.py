@@ -5,6 +5,7 @@ import json
 import subprocess
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from faster_whisper import WhisperModel
 import asyncio
@@ -25,6 +26,9 @@ UPLOAD_DIR = "uploads"
 OUTPUT_DIR = "outputs"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+app.mount("/static_uploads", StaticFiles(directory=UPLOAD_DIR), name="static_uploads")
+app.mount("/static_outputs", StaticFiles(directory=OUTPUT_DIR), name="static_outputs")
 
 # We'll load the model lazily when needed to save memory on startup
 model = None
@@ -78,14 +82,7 @@ async def upload_video(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
-    return {"video_id": video_id, "filename": file.filename, "url": f"/api/video/{video_id}.{ext}"}
-
-@app.get("/api/video/{filename}")
-async def get_video(filename: str):
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
-    raise HTTPException(status_code=404, detail="Video not found")
+    return {"video_id": video_id, "filename": file.filename, "url": f"/static_uploads/{video_id}.{ext}"}
 
 @app.post("/api/generate")
 async def generate_subtitles(req: GenerateRequest):
@@ -228,30 +225,25 @@ async def export_video(req: ExportRequest):
     
     out_video_path = os.path.join(OUTPUT_DIR, f"{req.video_id}_final.mp4")
     
-    # Run ffmpeg to burn subtitles
-    # Replace backslashes with forward slashes for ffmpeg filter
-    ass_path_fwd = ass_path.replace('\\', '/')
+    # In ffmpeg, backslashes and colons in filters need to be escaped properly
+    # Using absolute path with escaped colons and forward slashes is safest
+    abs_ass_path = os.path.abspath(ass_path).replace("\\", "/")
+    # Escape colon for ffmpeg filter: C:/ -> C\:/
+    abs_ass_path = abs_ass_path.replace(":", "\\:")
     
     # Subtitles filter in ffmpeg
     try:
         subprocess.run([
             "ffmpeg", "-y", 
             "-i", video_path, 
-            "-vf", f"ass={ass_path_fwd}", 
+            "-vf", f"ass='{abs_ass_path}'", 
             "-c:a", "copy",
             out_video_path
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail="Error exporting video")
+        raise HTTPException(status_code=500, detail="Error exporting video. Make sure ffmpeg is installed.")
         
-    return {"status": "success", "url": f"/api/download/{req.video_id}_final.mp4"}
-
-@app.get("/api/download/{filename}")
-async def download_video(filename: str):
-    file_path = os.path.join(OUTPUT_DIR, filename)
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="video/mp4", filename="captions_final.mp4")
-    raise HTTPException(status_code=404, detail="File not found")
+    return {"status": "success", "url": f"/static_outputs/{req.video_id}_final.mp4"}
 
 if __name__ == "__main__":
     import uvicorn

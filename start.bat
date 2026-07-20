@@ -4,7 +4,7 @@ echo Starting Automatic Subtitle Generator...
 :: Start the Python backend
 echo Starting backend...
 cd backend
-start cmd /k ".\venv\Scripts\activate && uvicorn main:app --reload --port 8000"
+start cmd /k ".\venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000"
 cd ..
 
 :: Start the Next.js frontend

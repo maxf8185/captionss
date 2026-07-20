@@ -11,6 +11,7 @@ export default function Home() {
   const [language, setLanguage] = useState("auto");
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
   const [styles, setStyles] = useState({
     font_name: "Arial",
@@ -43,6 +44,7 @@ export default function Home() {
   }, [videoUrl]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setErrorMsg(null);
     if (!e.target.files?.[0]) return;
     const selectedFile = e.target.files[0];
     setFile(selectedFile);
@@ -55,16 +57,18 @@ export default function Home() {
         method: "POST",
         body: formData,
       });
+      if (!res.ok) throw new Error("Upload failed");
       const data = await res.json();
       setVideoId(data.video_id);
       setVideoUrl(`http://localhost:8000${data.url}`);
     } catch (err) {
       console.error(err);
-      alert("Failed to upload video. Make sure backend is running.");
+      setErrorMsg("Помилка завантаження. Переконайтеся, що backend запущено.");
     }
   };
 
   const handleGenerate = async () => {
+    setErrorMsg(null);
     if (!videoId) return;
     setIsGenerating(true);
     try {
@@ -73,16 +77,18 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ video_id: videoId, language }),
       });
+      if (!res.ok) throw new Error("Generation failed");
       const data = await res.json();
       setSegments(data.segments);
     } catch (err) {
       console.error(err);
-      alert("Generation failed.");
+      setErrorMsg("Помилка генерації субтитрів.");
     }
     setIsGenerating(false);
   };
 
   const handleExport = async () => {
+    setErrorMsg(null);
     if (!videoId || segments.length === 0) return;
     try {
       const res = await fetch("http://localhost:8000/api/export", {
@@ -94,13 +100,14 @@ export default function Home() {
           styles,
         }),
       });
+      if (!res.ok) throw new Error("Export failed");
       const data = await res.json();
       if (data.status === "success") {
         window.open(`http://localhost:8000${data.url}`, "_blank");
       }
     } catch (err) {
       console.error(err);
-      alert("Export failed.");
+      setErrorMsg("Помилка експорту. Можливо, FFmpeg не встановлено на комп'ютері.");
     }
   };
 
@@ -136,6 +143,14 @@ export default function Home() {
 
       <main className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
+        {/* Error Banner */}
+        {errorMsg && (
+          <div className="lg:col-span-12 bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl flex items-center justify-between">
+            <span>{errorMsg}</span>
+            <button onClick={() => setErrorMsg(null)} className="opacity-50 hover:opacity-100">×</button>
+          </div>
+        )}
+
         {/* Left Column: Player */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           <div className="relative aspect-video bg-black/40 rounded-2xl border border-white/10 overflow-hidden shadow-2xl flex items-center justify-center group backdrop-blur-sm">
