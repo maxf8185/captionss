@@ -42,10 +42,9 @@ jobs:
         cd backend
         pyinstaller --noconfirm --onedir --windowed --add-data "../frontend/out;frontend/out" --collect-all faster_whisper --collect-all ctranslate2 --collect-all imageio_ffmpeg --name "AutoCaps" desktop.py
         
-    - name: Zip Release
+    - name: Build Installer with Inno Setup
       run: |
-        cd backend/dist
-        Compress-Archive -Path AutoCaps -DestinationPath AutoCaps-Windows.zip
+        "C:\Program Files (x86)\Inno Setup 6\iscc.exe" installer.iss
         
     - name: Create Release
       uses: softprops/action-gh-release@v2
@@ -53,6 +52,6 @@ jobs:
       with:
         tag_name: "v1.0.${{ github.run_number }}"
         name: "AutoCaps Desktop App (Windows)"
-        files: backend/dist/AutoCaps-Windows.zip
+        files: release/AutoCaps-Setup.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
