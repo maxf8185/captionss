@@ -679,28 +679,28 @@ export default function Home() {
         {/* Right Column: Controls */}
         <div className="lg:col-span-4 flex flex-col gap-4">
           {/* Tabs Navigation */}
-          <div className="flex bg-bg-card border border-border-color rounded-2xl p-2 gap-2 shadow-xl backdrop-blur-xl overflow-x-auto custom-scrollbar">
+          <div className="flex bg-black/20 border border-white/5 rounded-2xl p-1.5 gap-1 shadow-2xl backdrop-blur-3xl overflow-x-auto custom-scrollbar relative z-10">
             <button 
               onClick={() => setActiveTab('generation')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'generation' ? 'bg-[#0057ff] text-white shadow-lg' : 'text-text-secondary hover:bg-player-bg'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'generation' ? 'bg-gradient-to-r from-[#0057ff] to-[#00a1ff] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/10 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <Wand2 className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_generation}</span>
             </button>
             <button 
               onClick={() => setActiveTab('styling')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'styling' ? 'bg-[#0057ff] text-white shadow-lg' : 'text-text-secondary hover:bg-player-bg'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'styling' ? 'bg-gradient-to-r from-[#0057ff] to-[#00a1ff] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/10 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <Settings className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_styling}</span>
             </button>
             <button 
               onClick={() => setActiveTab('editor')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'editor' ? 'bg-[#0057ff] text-white shadow-lg' : 'text-text-secondary hover:bg-player-bg'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'editor' ? 'bg-gradient-to-r from-[#0057ff] to-[#00a1ff] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/10 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <Type className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_editor}</span>
             </button>
             <button 
               onClick={() => setActiveTab('overlays')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'overlays' ? 'bg-[#0057ff] text-white shadow-lg' : 'text-text-secondary hover:bg-player-bg'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'overlays' ? 'bg-gradient-to-r from-[#0057ff] to-[#00a1ff] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/10 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <UploadCloud className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_overlays}</span>
             </button>
@@ -749,21 +749,33 @@ export default function Home() {
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
-                <button 
-                  onClick={handleGenerate}
-                  disabled={!videoId || isGenerating}
-                  className="w-full bg-[#0057ff] hover:bg-[#0046cc] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium p-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(0,87,255,0.4)] relative overflow-hidden"
-                >
-                  {isGenerating && generateProgress > 0 && (
-                    <div className="absolute left-0 top-0 bottom-0 bg-white/20 transition-all duration-300" style={{ width: `${generateProgress}%` }} />
-                  )}
-                  {isGenerating ? (
-                    <span className="relative z-10 flex items-center gap-2"><span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" /> {t.processing} {generateProgress > 0 ? `${generateProgress}%` : ''}</span>
-                  ) : (
-                    <span className="relative z-10 flex items-center gap-2"><Wand2 className="w-4 h-4" /> {t.auto_generate}</span>
-                  )}
-                </button>
+              <div className="flex flex-col gap-4 mt-2">
+                {isGenerating ? (
+                  <div className="bg-black/40 border border-[#0057ff]/30 rounded-xl p-5 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,87,255,0.15)] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#0057ff]/10 to-transparent animate-pulse" />
+                    <div className="flex justify-between items-center relative z-10">
+                      <span className="text-sm font-semibold text-white flex items-center gap-2">
+                        <Wand2 className="w-4 h-4 text-[#0057ff] animate-spin-slow" /> 
+                        {t.processing}
+                      </span>
+                      <span className="text-sm font-mono text-[#00a1ff]">{generateProgress}%</span>
+                    </div>
+                    <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden relative z-10">
+                      <div 
+                        className="bg-gradient-to-r from-[#0057ff] to-[#00a1ff] h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(0,161,255,0.8)]"
+                        style={{ width: `${generateProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={handleGenerate}
+                    disabled={!videoId}
+                    className="w-full bg-gradient-to-r from-[#0057ff] to-[#00a1ff] hover:from-[#0046cc] hover:to-[#0081cc] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(0,87,255,0.4)] hover:shadow-[0_4px_25px_rgba(0,87,255,0.6)] hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <Wand2 className="w-5 h-5" /> {t.auto_generate}
+                  </button>
+                )}
               </div>
             </div>
             )}
@@ -886,38 +898,39 @@ export default function Home() {
 
             {activeTab === 'editor' && (
               <div className="flex flex-col flex-1 h-full max-h-[600px] animate-in fade-in duration-300">
-                <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-                  <div className="flex gap-2">
+                <div className="flex items-center justify-between mb-4 gap-2 flex-wrap bg-black/20 p-2 rounded-xl border border-white/5">
+                  <div className="flex gap-1.5">
                     <button 
                       onClick={() => addSegment(segments.length)}
-                      className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-500 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                      className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-text-primary px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
                     >
-                      <span className="text-lg leading-none">+</span> {t.add_segment}
+                      <span className="text-green-400 font-bold leading-none">+</span> <span className="hidden sm:inline">{t.add_segment}</span>
                     </button>
+                    <div className="w-px bg-white/10 mx-1" />
                     <button 
                       onClick={() => shiftTime(-1)}
-                      className="flex items-center gap-1.5 bg-player-bg hover:bg-border-color text-text-primary px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                      className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-text-primary px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
                     >
                       {t.shift_backward}
                     </button>
                     <button 
                       onClick={() => shiftTime(1)}
-                      className="flex items-center gap-1.5 bg-player-bg hover:bg-border-color text-text-primary px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                      className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 text-text-primary px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
                     >
                       {t.shift_forward}
                     </button>
                   </div>
-                  <div className="flex gap-2">
-                    <label className="flex items-center gap-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-500 px-3 py-1.5 rounded text-sm font-medium transition-colors cursor-pointer">
-                      <UploadCloud className="w-4 h-4" /> {t.upload_srt}
+                  <div className="flex gap-1.5">
+                    <label className="flex items-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer">
+                      <UploadCloud className="w-4 h-4" /> <span className="hidden sm:inline">{t.upload_srt}</span>
                       <input type="file" className="hidden" accept=".srt" onChange={handleUploadSrt} />
                     </label>
                     <button 
                       onClick={downloadSRT}
                       disabled={segments.length === 0}
-                      className="flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-blue-500 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                      className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed border border-blue-500/20 text-blue-400 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
                     >
-                      <Download className="w-4 h-4" /> {t.download_srt}
+                      <Download className="w-4 h-4" /> <span className="hidden sm:inline">{t.download_srt}</span>
                     </button>
                   </div>
                 </div>
@@ -929,9 +942,9 @@ export default function Home() {
                     </div>
                   ) : (
                     segments.map((seg, idx) => (
-                      <div key={seg.id || idx} className="bg-player-bg border border-border-color rounded-lg p-3 group relative">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs font-mono text-text-secondary flex gap-2">
+                      <div key={seg.id || idx} className="bg-black/20 hover:bg-black/40 border border-white/5 hover:border-white/10 rounded-xl p-4 group relative transition-all duration-200">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="flex items-center gap-2 bg-black/40 px-2.5 py-1 rounded-md border border-white/5">
                             <input 
                               type="number" step="0.1" min="0" 
                               value={seg.start.toFixed(1)} 
@@ -940,9 +953,9 @@ export default function Home() {
                                 newSegs[idx].start = parseFloat(e.target.value) || 0;
                                 setSegments(newSegs);
                               }}
-                              className="w-14 bg-transparent border-b border-border-color focus:border-[#0057ff] outline-none" 
+                              className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#00a1ff] outline-none text-right font-mono" 
                             />
-                            {' --> '} 
+                            <span className="text-xs text-white/20">⟶</span>
                             <input 
                               type="number" step="0.1" min="0" 
                               value={seg.end.toFixed(1)} 
@@ -951,15 +964,16 @@ export default function Home() {
                                 newSegs[idx].end = parseFloat(e.target.value) || 0;
                                 setSegments(newSegs);
                               }}
-                              className="w-14 bg-transparent border-b border-border-color focus:border-[#0057ff] outline-none" 
+                              className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#00a1ff] outline-none text-left font-mono" 
                             />
                           </span>
                           <button 
                             onClick={() => deleteSegment(idx)}
-                            className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20 p-1 rounded"
+                            className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20 p-1.5 rounded-md"
                             title={t.delete_segment}
                           >
-                            ×
+                            <span className="sr-only">Delete</span>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
                           </button>
                         </div>
                     <textarea 
@@ -969,8 +983,9 @@ export default function Home() {
                         newSegs[idx].text = e.target.value;
                         setSegments(newSegs);
                       }}
-                      className="w-full bg-transparent text-text-primary focus:outline-none resize-none text-sm"
+                      className="w-full bg-transparent text-text-primary text-sm focus:outline-none resize-none leading-relaxed"
                       rows={2}
+                      placeholder="Enter subtitle text..."
                     />
                   </div>
                 ))
