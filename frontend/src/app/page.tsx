@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { UploadCloud, Video, Settings, Wand2, Download, Palette, Type, AlignCenter, Moon, Sun, Globe } from "lucide-react";
+import { UploadCloud, Video, Settings, Wand2, Download, Palette, Type, AlignCenter, Moon, Sun, Globe, Trash2 } from "lucide-react";
 import { translations, Language } from "./translations";
 
 export default function Home() {
@@ -449,7 +449,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main className="max-w-7xl mx-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-64px)]">
         
         {/* Error Banner */}
         {errorMsg && (
@@ -460,11 +460,11 @@ export default function Home() {
         )}
 
         {/* Left Column: Player */}
-        <div className="lg:col-span-8 flex flex-col gap-6 items-center w-full">
-          <div className="flex justify-center w-full bg-black/20 rounded-3xl p-2 sm:p-4">
+        <div className="lg:col-span-8 flex flex-col gap-4 w-full h-full min-h-0 overflow-hidden">
+          <div className="flex-1 flex justify-center items-center w-full bg-black/20 rounded-3xl p-2 sm:p-4 min-h-0">
             <div 
-              className={`relative bg-black rounded-2xl border border-white/10 overflow-hidden shadow-2xl group backdrop-blur-sm transition-all duration-300 ${!videoUrl ? 'aspect-video w-full' : ''}`}
-              style={videoAspect ? { aspectRatio: videoAspect, maxHeight: '70vh', maxWidth: '100%' } : {}}
+              className={`relative bg-black rounded-2xl border border-white/10 overflow-hidden shadow-2xl group backdrop-blur-sm transition-all duration-300 ${!videoUrl ? 'aspect-video w-full max-h-full' : ''}`}
+              style={videoAspect ? { aspectRatio: videoAspect, maxHeight: '100%', maxWidth: '100%' } : {}}
             >
               {!videoUrl ? (
                 <label className="flex flex-col items-center justify-center h-full gap-4 cursor-pointer p-12 text-slate-400 hover:text-white transition-colors">
@@ -484,7 +484,25 @@ export default function Home() {
                     src={videoUrl} 
                     className="w-full h-full object-contain"
                     controls
+                    controlsList="nodownload nofullscreen noremoteplayback"
+                    disablePictureInPicture
                   />
+                  
+                  {/* Delete video button */}
+                  <button
+                    onClick={() => {
+                      setVideoUrl(null);
+                      setVideoId(null);
+                      setSegments([]);
+                      setThumbnails([]);
+                      setOverlays([]);
+                      setGenerateProgress(0);
+                    }}
+                    className="absolute top-4 right-4 bg-black/60 hover:bg-red-500/80 text-white p-2 rounded-full backdrop-blur-sm border border-white/10 transition-all opacity-0 group-hover:opacity-100 z-50"
+                    title={t.remove || "Delete video"}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
                   
                   {/* Custom Subtitle Overlay */}
                   {activeSegment && videoAspect && (
@@ -601,9 +619,9 @@ export default function Home() {
 
            {/* Editable Timeline Placeholder */}
           {videoUrl && (
-            <div className="bg-bg-card border border-border-color rounded-xl p-4 flex flex-col gap-2 overflow-hidden shadow-2xl relative mt-2">
+            <div className="bg-bg-card border border-border-color rounded-xl p-3 flex flex-col gap-2 overflow-hidden shadow-2xl relative shrink-0 w-full">
                {segments.length === 0 ? (
-                 <div className="text-text-secondary text-sm flex items-center gap-2 h-24 w-full justify-center border border-dashed border-border-color rounded-lg">
+                 <div className="text-text-secondary text-sm flex items-center gap-2 h-16 w-full justify-center border border-dashed border-border-color rounded-lg">
                    {t.timeline_placeholder}
                  </div>
                ) : (
@@ -694,7 +712,7 @@ export default function Home() {
         </div>
 
         {/* Right Column: Controls */}
-        <div className="lg:col-span-4 flex flex-col gap-4">
+        <div className="lg:col-span-4 flex flex-col gap-4 h-full min-h-0">
           {/* Tabs Navigation */}
           <div className="flex bg-black/20 border border-white/5 rounded-2xl p-1.5 gap-1 shadow-2xl backdrop-blur-3xl overflow-x-auto custom-scrollbar relative z-10">
             <button 
@@ -723,7 +741,7 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="bg-bg-card border border-border-color rounded-2xl p-6 backdrop-blur-xl shadow-xl flex-1 flex flex-col min-h-[500px]">
+          <div className="bg-bg-card border border-border-color rounded-2xl p-5 backdrop-blur-xl shadow-xl flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
             {activeTab === 'generation' && (
               <div className="space-y-4 animate-in fade-in duration-300">
               <div className="grid grid-cols-2 gap-4">
