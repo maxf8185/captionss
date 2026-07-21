@@ -8,7 +8,16 @@ import sys
 import tkinter as tk
 from main import app
 
+def setup_logging():
+    if getattr(sys, 'frozen', False):
+        log_dir = os.path.join(os.path.expanduser("~"), "AutoCapsData")
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, "app.log")
+        sys.stdout = open(log_path, 'w', encoding='utf-8')
+        sys.stderr = sys.stdout
+
 def start_server():
+    setup_logging()
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="error")
 
 def open_browser():
@@ -34,10 +43,11 @@ def open_browser():
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
+    setup_logging()
     
-    # Run the server in a separate thread
-    server_thread = threading.Thread(target=start_server, daemon=True)
-    server_thread.start()
+    # Run the server in a separate process to avoid signal errors
+    server_process = multiprocessing.Process(target=start_server, daemon=True)
+    server_process.start()
     
     # Open browser in a separate thread
     browser_thread = threading.Thread(target=open_browser, daemon=True)

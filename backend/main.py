@@ -120,7 +120,8 @@ async def generate_subtitles(req: GenerateRequest):
     ffmpeg_exe = get_ffmpeg_path()
     
     audio_path = os.path.join(UPLOAD_DIR, f"{req.video_id}.wav")
-    subprocess.run([ffmpeg_exe, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+    subprocess.run([ffmpeg_exe, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags)
     
     lang = req.language if req.language != 'auto' else None
     segments, info = whisper_model.transcribe(audio_path, language=lang, word_timestamps=True)
@@ -223,6 +224,7 @@ async def export_video(req: ExportRequest):
     abs_ass_path = abs_ass_path.replace(":", "\\:")
     
     ffmpeg_exe = get_ffmpeg_path()
+    creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
     
     try:
         subprocess.run([
@@ -231,7 +233,7 @@ async def export_video(req: ExportRequest):
             "-vf", f"ass='{abs_ass_path}'", 
             "-c:a", "copy",
             out_video_path
-        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags)
     except subprocess.CalledProcessError:
         raise HTTPException(status_code=500, detail="Error exporting video. Make sure ffmpeg is installed.")
         
