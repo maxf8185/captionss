@@ -171,7 +171,7 @@ async def generate_subtitles(req: GenerateRequest):
     
     audio_path = os.path.join(UPLOAD_DIR, f"{req.video_id}.wav")
     creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
-    subprocess.run([ffmpeg_exe, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags)
+    subprocess.run([ffmpeg_exe, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_path], check=True, stdout=None, stderr=None, creationflags=creation_flags)
     
     lang = req.language if req.language != 'auto' else None
     initial_prompt = req.prompt if req.prompt and len(req.prompt.strip()) > 0 else None
@@ -356,7 +356,7 @@ async def export_video(req: ExportRequest):
             filter_chains.append(f"[{last_v}][ol{i}]overlay=x=(W-w)/2:y=(H-h)/2:enable='between(t,{ov.start},{ov.end})'[v{i+1}]")
             last_v = f"v{i+1}"
             
-    filter_chains.append(f"[{last_v}]ass='{abs_ass_path}'[outv]")
+    filter_chains.append(f"[{last_v}]ass='{abs_ass_path}',format=yuv420p,pad=ceil(iw/2)*2:ceil(ih/2)*2[outv]")
     filter_complex = ";".join(filter_chains)
     
     cmd = [ffmpeg_exe, "-y"] + inputs + [
@@ -370,9 +370,12 @@ async def export_video(req: ExportRequest):
     creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
     
     try:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags)
-    except subprocess.CalledProcessError:
-        raise HTTPException(status_code=500, detail="Error exporting video. Make sure ffmpeg is installed.")
+        result = subprocess.run(cmd, capture_output=True, text=True, creationflags=creation_flags)
+        if result.returncode != 0:
+            print(result.stderr)
+            raise Exception(result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error exporting video: {str(e)}")
         
     return {"status": "success", "url": None if req.save_path else f"/api/static_outputs/{req.video_id}_final.mp4"}
 

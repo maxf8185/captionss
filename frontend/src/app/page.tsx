@@ -373,6 +373,10 @@ export default function Home() {
       });
       const data = await res.json();
       
+      if (!res.ok) {
+        throw new Error(data.detail || "Export failed on the server.");
+      }
+      
       if (!savePath) {
         // Fallback for web browser: trigger download
         const a = document.createElement("a");
