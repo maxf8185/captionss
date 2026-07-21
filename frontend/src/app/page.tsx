@@ -406,10 +406,11 @@ export default function Home() {
               </>
             )}
           </div>
+        </div>
 
-          {/* Editable Timeline Placeholder */}
-          {videoUrl && (
-            <div className="bg-black/40 border border-white/10 rounded-xl p-4 flex flex-col gap-2 overflow-hidden shadow-2xl relative mt-2">
+        {/* Editable Timeline Placeholder */}
+        {videoUrl && (
+          <div className="bg-black/40 border border-white/10 rounded-xl p-4 flex flex-col gap-2 overflow-hidden shadow-2xl relative mt-2">
                {segments.length === 0 ? (
                  <div className="text-slate-500 text-sm flex items-center gap-2 h-24 w-full justify-center border border-dashed border-white/10 rounded-lg">
                    Generate subtitles to see the timeline
