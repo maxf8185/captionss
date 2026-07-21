@@ -707,25 +707,31 @@ export default function Home() {
                            const isActive = currentTime >= w.start && currentTime <= w.end;
                            
                            return (
-                             <div 
-                               key={`${i}-${wIndex}`}
-                               className={`absolute top-14 bottom-4 rounded-full border flex items-center justify-center transition-all overflow-hidden ${isActive ? 'bg-gradient-to-r from-amber-400 to-orange-500 border-orange-400 shadow-[0_0_15px_rgba(251,191,36,0.8)] z-40 scale-105' : 'bg-gradient-to-r from-amber-400/90 to-orange-500/90 border-orange-500/50 hover:from-amber-400 hover:to-orange-500 z-30'}`}
-                               style={{ 
-                                 left: `${startPct}%`, 
-                                 width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`, // min width 20px
-                               }}
-                               onClick={(e) => e.stopPropagation()} // prevent seeking on edit
-                             >
-                               <input 
-                                 className="bg-transparent text-black font-bold text-center w-full focus:outline-none focus:bg-white/40 rounded px-0.5 text-xs sm:text-sm selection:bg-[#6366f1]/20"
-                                 value={w.word}
-                                 onChange={(e) => {
-                                     const newSegments = [...segments];
-                                     newSegments[i].words[wIndex].word = e.target.value;
-                                     setSegments(newSegments);
-                                 }}
-                               />
-                             </div>
+                              <div 
+                                key={`${i}-${wIndex}`}
+                                className={`absolute top-14 bottom-4 rounded-xl flex items-center justify-center transition-all ${isActive ? 'bg-[#ffe534] shadow-[0_0_15px_rgba(255,229,52,0.4)] z-40 scale-110' : 'bg-[#ffe534]/90 hover:bg-[#ffe534] z-30'}`}
+                                style={{ 
+                                  left: `${startPct}%`, 
+                                  width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`, // min width 20px
+                                }}
+                                onClick={(e) => e.stopPropagation()} // prevent seeking on edit
+                              >
+                                {isActive && (
+                                  <>
+                                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#a855f7]" />
+                                    <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#a855f7]" />
+                                  </>
+                                )}
+                                <input 
+                                  className="bg-transparent text-black font-semibold text-center w-full focus:outline-none focus:bg-white/40 rounded px-0.5 text-xs sm:text-sm selection:bg-[#6366f1]/20"
+                                  value={w.word}
+                                  onChange={(e) => {
+                                      const newSegments = [...segments];
+                                      newSegments[i].words[wIndex].word = e.target.value;
+                                      setSegments(newSegments);
+                                  }}
+                                />
+                              </div>
                            )
                         })
                      ))}
