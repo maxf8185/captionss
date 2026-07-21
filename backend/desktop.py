@@ -5,6 +5,21 @@ import uvicorn
 import webview
 from main import app
 
+class Api:
+    def save_file_dialog(self, default_filename):
+        try:
+            window = webview.windows[0]
+            result = window.create_file_dialog(
+                webview.SAVE_DIALOG, 
+                directory='', 
+                save_filename=default_filename
+            )
+            if result and len(result) > 0:
+                return result[0]
+        except Exception as e:
+            print("Error opening dialog:", e)
+        return None
+
 def setup_logging():
     if getattr(sys, 'frozen', False):
         log_dir = os.path.join(os.path.expanduser("~"), "AutoCapsData")
@@ -26,7 +41,8 @@ if __name__ == '__main__':
     server_process.start()
     
     # Start the pywebview window
-    webview.create_window('AutoCaps', 'http://127.0.0.1:8000', width=1280, height=800)
+    api = Api()
+    webview.create_window('AutoCaps', 'http://127.0.0.1:8000', width=1280, height=800, js_api=api)
     webview.start()
     
     sys.exit(0)

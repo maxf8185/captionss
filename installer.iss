@@ -11,7 +11,7 @@ ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
-
+SetupIconFile=backend\logo.ico
 [Files]
 Source: "backend\dist\AutoCaps\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 

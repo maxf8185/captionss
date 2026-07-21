@@ -13,7 +13,13 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showSplash, setShowSplash] = useState(true);
   
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [duration, setDuration] = useState(1);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -132,9 +138,22 @@ export default function Home() {
   };
 
   const handleExport = async () => {
-    setErrorMsg(null);
-    if (!videoId || segments.length === 0) return;
+    if (!videoId) return;
+    
     try {
+      setIsGenerating(true);
+      setErrorMsg(null);
+      let savePath = null;
+      
+      // Try to ask for save path using pywebview API
+      if (typeof window !== "undefined" && (window as any).pywebview && (window as any).pywebview.api) {
+        savePath = await (window as any).pywebview.api.save_file_dialog("AutoCaps_Video.mp4");
+        if (!savePath) {
+          setIsGenerating(false);
+          return; // User cancelled the dialog
+        }
+      }
+      
       const res = await fetch("/api/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -142,16 +161,27 @@ export default function Home() {
           video_id: videoId,
           segments,
           styles,
-        }),
+          save_path: savePath
+        })
       });
-      if (!res.ok) throw new Error("Export failed");
       const data = await res.json();
-      if (data.status === "success") {
-        window.open(data.url, "_blank");
+      
+      if (!savePath) {
+        // Fallback for web browser: trigger download
+        const a = document.createElement("a");
+        a.href = data.url;
+        a.download = `AutoCaps_${videoId}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        alert("Video successfully saved to: " + savePath);
       }
-    } catch (err) {
-      console.error(err);
-      setErrorMsg("Помилка експорту. Можливо, FFmpeg не встановлено на комп'ютері.");
+    } catch (e) {
+      console.error(e);
+      setErrorMsg("Failed to export video.");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -160,23 +190,32 @@ export default function Home() {
     (s) => currentTime >= s.start && currentTime <= s.end
   );
 
+  if (showSplash) {
+    return (
+      <div className="min-h-screen bg-[#041e42] flex flex-col items-center justify-center transition-opacity duration-500">
+        <img src="/logo.png" alt="AutoCaps" className="h-24 md:h-32 object-contain animate-pulse mb-6" onError={(e) => { e.currentTarget.style.display='none' }} />
+        <h1 className="text-white text-4xl font-bold tracking-tight">Auto<span className="text-[#0057ff]">Caps</span></h1>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-blue-500/30">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950 -z-10" />
+    <div className="min-h-screen bg-[#020817] text-white font-sans selection:bg-[#0057ff]/30">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0057ff]/15 via-[#020817] to-[#020817] -z-10" />
       
-      <header className="border-b border-white/10 bg-black/20 backdrop-blur-xl sticky top-0 z-50">
+      <header className="border-b border-white/10 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="AutoCaps" className="h-8 object-contain" onError={(e) => { e.currentTarget.style.display='none' }} />
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-2xl tracking-tight hidden sm:block">Auto<span className="text-blue-500">Caps</span></h1>
+              <h1 className="font-bold text-2xl tracking-tight hidden sm:block">Auto<span className="text-[#0057ff]">Caps</span></h1>
             </div>
           </div>
           <div className="flex gap-4">
             {videoId && (
               <button 
                 onClick={handleExport}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full font-medium transition-all active:scale-95 shadow-lg shadow-blue-500/20"
+                className="flex items-center gap-2 bg-[#0057ff] hover:bg-[#0046cc] text-white px-4 py-2 rounded-full font-medium transition-all active:scale-95 shadow-[0_0_15px_rgba(0,87,255,0.4)]"
               >
                 <Download className="w-4 h-4" /> Export Video
               </button>
@@ -197,10 +236,10 @@ export default function Home() {
 
         {/* Left Column: Player */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className="relative aspect-video bg-black/40 rounded-2xl border border-white/10 overflow-hidden shadow-2xl flex items-center justify-center group backdrop-blur-sm">
+          <div className={`relative bg-black/40 rounded-2xl border border-white/10 overflow-hidden shadow-2xl flex items-center justify-center group backdrop-blur-sm ${!videoUrl ? 'aspect-video' : 'max-h-[70vh] min-h-[40vh]'}`}>
             {!videoUrl ? (
               <label className="flex flex-col items-center gap-4 cursor-pointer p-12 text-slate-400 hover:text-white transition-colors">
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-all">
+                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#0057ff]/20 group-hover:text-[#0057ff] transition-all">
                   <UploadCloud className="w-8 h-8" />
                 </div>
                 <div className="text-center">
@@ -214,7 +253,7 @@ export default function Home() {
                 <video 
                   ref={videoRef}
                   src={videoUrl} 
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain max-h-[70vh]"
                   controls
                 />
                 
@@ -311,7 +350,7 @@ export default function Home() {
                                onClick={(e) => e.stopPropagation()} // prevent seeking on edit
                              >
                                <input 
-                                 className="bg-transparent text-black font-bold text-center w-full focus:outline-none focus:bg-white/40 rounded px-0.5 text-xs sm:text-sm selection:bg-black/20"
+                                 className="bg-transparent text-black font-bold text-center w-full focus:outline-none focus:bg-white/40 rounded px-0.5 text-xs sm:text-sm selection:bg-[#0057ff]/20"
                                  value={w.word}
                                  onChange={(e) => {
                                      const newSegments = [...segments];
@@ -332,9 +371,9 @@ export default function Home() {
 
         {/* Right Column: Controls */}
         <div className="lg:col-span-4 flex flex-col gap-6">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-xl">
             <h2 className="text-lg font-semibold flex items-center gap-2 mb-6">
-              <Wand2 className="w-5 h-5 text-blue-400" /> Generation
+              <Wand2 className="w-5 h-5 text-[#0057ff]" /> Generation
             </h2>
             
             <div className="space-y-4">
@@ -343,7 +382,7 @@ export default function Home() {
                 <select 
                   value={language} 
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer appearance-none"
+                  className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
                 >
                   <option value="auto">Auto Detect</option>
                   <option value="uk">Ukrainian</option>
@@ -361,14 +400,14 @@ export default function Home() {
                   value={prompt} 
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="e.g. John Doe, AutoCaps, specialized terms..."
-                  className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors h-20 resize-none text-sm custom-scrollbar"
+                  className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#0057ff] transition-colors h-20 resize-none text-sm custom-scrollbar"
                 />
               </div>
 
               <button 
                 onClick={handleGenerate}
                 disabled={!videoId || isGenerating}
-                className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium p-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20"
+                className="w-full bg-[#0057ff] hover:bg-[#0046cc] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium p-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(0,87,255,0.4)]"
               >
                 {isGenerating ? (
                   <><span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" /> Processing...</>
@@ -379,7 +418,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl flex-1">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl flex-1 shadow-xl">
             <h2 className="text-lg font-semibold flex items-center gap-2 mb-6">
               <Settings className="w-5 h-5 text-cyan-400" /> Styling
             </h2>

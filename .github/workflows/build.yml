@@ -35,12 +35,17 @@ jobs:
         cd backend
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install imageio-ffmpeg pyinstaller
+        pip install imageio-ffmpeg pyinstaller Pillow
+        
+    - name: Convert Logo to ICO
+      run: |
+        cd backend
+        python -c "from PIL import Image; import os; img = Image.open('../frontend/public/logo.png'); img.save('logo.ico')"
         
     - name: Build Executable with PyInstaller
       run: |
         cd backend
-        pyinstaller --noconfirm --onedir --windowed --add-data "../frontend/out;frontend/out" --collect-all faster_whisper --collect-all ctranslate2 --collect-all imageio_ffmpeg --name "AutoCaps" desktop.py
+        pyinstaller --noconfirm --onedir --windowed --icon=logo.ico --add-data "../frontend/out;frontend/out" --collect-all faster_whisper --collect-all ctranslate2 --collect-all imageio_ffmpeg --name "AutoCaps" desktop.py
         
     - name: Build Installer with Inno Setup
       run: |

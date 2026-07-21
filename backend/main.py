@@ -117,6 +117,7 @@ class ExportRequest(BaseModel):
     video_id: str
     segments: List[SubtitleSegment]
     styles: StyleOptions
+    save_path: Optional[str] = None
 
 @app.post("/api/upload")
 async def upload_video(file: UploadFile = File(...)):
@@ -272,7 +273,7 @@ async def export_video(req: ExportRequest):
     ass_path = os.path.join(OUTPUT_DIR, f"{req.video_id}.ass")
     generate_ass_file([s.dict() for s in req.segments], req.styles, ass_path, video_width, video_height)
     
-    out_video_path = os.path.join(OUTPUT_DIR, f"{req.video_id}_final.mp4")
+    out_video_path = req.save_path if req.save_path else os.path.join(OUTPUT_DIR, f"{req.video_id}_final.mp4")
     
     abs_ass_path = os.path.abspath(ass_path).replace("\\", "/")
     abs_ass_path = abs_ass_path.replace(":", "\\:")
@@ -291,7 +292,7 @@ async def export_video(req: ExportRequest):
     except subprocess.CalledProcessError:
         raise HTTPException(status_code=500, detail="Error exporting video. Make sure ffmpeg is installed.")
         
-    return {"status": "success", "url": f"/api/static_outputs/{req.video_id}_final.mp4"}
+    return {"status": "success", "url": None if req.save_path else f"/api/static_outputs/{req.video_id}_final.mp4"}
 
 # Serve Frontend HTML
 @app.get("/{full_path:path}")
