@@ -10,7 +10,7 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [segments, setSegments] = useState<any[]>([]);
   const [language, setLanguage] = useState("auto");
-  const [modelSize, setModelSize] = useState("medium"); // default to medium
+  const [modelSize, setModelSize] = useState("large"); // default to large for better accuracy
 
   const [appLang, setAppLang] = useState<Language>("uk");
   const t = translations[appLang];
@@ -53,16 +53,16 @@ export default function Home() {
   
   const [styles, setStyles] = useState({
     font_name: "Arial",
-    font_size: 10, // Percentage of video height
+    font_size: 7, // Percentage of video height
     primary_color: "#FFFFFF",
     highlight_color: "#0ea5e9", // sky-500
     outline_color: "#000000",
     position: "Bottom",
     pos_x: 50,
-    pos_y: 90,
+    pos_y: 80,
     effect: "karaoke", // karaoke, highlight, reveal
-    words_per_line: 5,
-    max_lines: 2,
+    words_per_line: 3,
+    max_lines: 1,
   });
 
   const videoRef = useRef<HTMLVideoElement>(null);
