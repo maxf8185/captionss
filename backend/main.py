@@ -5,7 +5,7 @@ import json
 import subprocess
 import re
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from faster_whisper import WhisperModel
@@ -177,31 +177,38 @@ async def generate_subtitles(req: GenerateRequest):
     if lang == 'uk' and not initial_prompt:
         initial_prompt = "Привіт! Це текст українською мовою, з правильною граматикою та пунктуацією."
         
-    segments, info = whisper_model.transcribe(audio_path, language=lang, word_timestamps=True, initial_prompt=initial_prompt, beam_size=5)
+    segments_generator, info = whisper_model.transcribe(audio_path, language=lang, word_timestamps=True, initial_prompt=initial_prompt, beam_size=5)
     
-    result_segments = []
-    seg_id = 1
-    for segment in segments:
-        words = []
-        for word in segment.words:
-            words.append({
-                "word": word.word,
-                "start": word.start,
-                "end": word.end
+    async def event_generator():
+        result_segments = []
+        seg_id = 1
+        total_duration = info.duration
+        for segment in segments_generator:
+            words = []
+            for word in segment.words:
+                words.append({
+                    "word": word.word,
+                    "start": word.start,
+                    "end": word.end
+                })
+            result_segments.append({
+                "id": seg_id,
+                "start": segment.start,
+                "end": segment.end,
+                "text": segment.text,
+                "words": words
             })
-        result_segments.append({
-            "id": seg_id,
-            "start": segment.start,
-            "end": segment.end,
-            "text": segment.text,
-            "words": words
-        })
-        seg_id += 1
+            seg_id += 1
+            progress = min(100, int((segment.end / total_duration) * 100)) if total_duration > 0 else 0
+            yield json.dumps({"progress": progress}) + "\n"
+            await asyncio.sleep(0.01)
+            
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+            
+        yield json.dumps({"segments": result_segments, "detected_language": info.language, "progress": 100}) + "\n"
         
-    if os.path.exists(audio_path):
-        os.remove(audio_path)
-        
-    return {"segments": result_segments, "detected_language": info.language}
+    return StreamingResponse(event_generator(), media_type="application/x-ndjson")
 
 def generate_ass_file(segments: List[dict], styles: StyleOptions, ass_path: str, video_width: int, video_height: int):
     alignment = 2

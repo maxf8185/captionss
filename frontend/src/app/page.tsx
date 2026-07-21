@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { UploadCloud, Video, Settings, Wand2, Download, Palette, Type, AlignCenter } from "lucide-react";
+import { UploadCloud, Video, Settings, Wand2, Download, Palette, Type, AlignCenter, Moon, Sun, Globe } from "lucide-react";
+import { translations, Language } from "./translations";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -9,7 +10,14 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [segments, setSegments] = useState<any[]>([]);
   const [language, setLanguage] = useState("auto");
-  const [modelSize, setModelSize] = useState("small"); // Upgrade default to small for better quality
+  const [modelSize, setModelSize] = useState("medium"); // default to medium
+
+  const [appLang, setAppLang] = useState<Language>("uk");
+  const t = translations[appLang];
+  const [theme, setTheme] = useState<"light"|"dark">("dark");
+  const [activeTab, setActiveTab] = useState<"generation" | "styling" | "editor" | "overlays">("generation");
+  const [generateProgress, setGenerateProgress] = useState<number>(0);
+
   const [prompt, setPrompt] = useState("");
   type Overlay = {
     id: string;
@@ -29,6 +37,14 @@ export default function Home() {
     const timer = setTimeout(() => setShowSplash(false), 1500);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [theme]);
 
   const [duration, setDuration] = useState(1);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
@@ -138,6 +154,7 @@ export default function Home() {
     setErrorMsg(null);
     if (!videoId) return;
     setIsGenerating(true);
+    setGenerateProgress(0);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -145,11 +162,37 @@ export default function Home() {
         body: JSON.stringify({ video_id: videoId, language, prompt, model_size: modelSize }),
       });
       if (!res.ok) throw new Error("Generation failed");
-      const data = await res.json();
-      setSegments(data.segments);
+      if (!res.body) throw new Error("No response body");
+      
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let partial = "";
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        partial += decoder.decode(value, { stream: true });
+        const lines = partial.split("\n");
+        partial = lines.pop() || "";
+        
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            if (data.progress !== undefined) {
+              setGenerateProgress(data.progress);
+            }
+            if (data.segments) {
+              setSegments(data.segments);
+            }
+          } catch (e) {
+            console.error("Error parsing stream chunk", line, e);
+          }
+        }
+      }
     } catch (err) {
       console.error(err);
-      setErrorMsg("Помилка генерації субтитрів.");
+      setErrorMsg(t.error);
     }
     setIsGenerating(false);
   };
@@ -176,6 +219,125 @@ export default function Home() {
       console.error(err);
       setErrorMsg("Failed to upload overlay.");
     }
+  };
+  const parseSRT = (content: string) => {
+    const lines = content.replace(/\r/g, '').split('\n');
+    const newSegments: any[] = [];
+    let currentSegment: any = null;
+    
+    const timeToSeconds = (timeStr: string) => {
+      const parts = timeStr.replace(',', '.').split(':');
+      if (parts.length === 3) {
+        return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+      }
+      return 0;
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      if (!isNaN(parseInt(line)) && lines[i+1]?.includes('-->')) {
+        const timeMatch = lines[i+1].match(/(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/);
+        if (timeMatch) {
+          currentSegment = {
+            id: parseInt(line),
+            start: timeToSeconds(timeMatch[1]),
+            end: timeToSeconds(timeMatch[2]),
+            text: "",
+            words: []
+          };
+          i++; 
+        }
+      } else if (currentSegment) {
+        currentSegment.text += (currentSegment.text ? " " : "") + line;
+        const wordsArr = currentSegment.text.split(' ').map((w: string, idx: number, arr: any[]) => ({
+          word: w,
+          start: currentSegment.start + ((currentSegment.end - currentSegment.start) / arr.length) * idx,
+          end: currentSegment.start + ((currentSegment.end - currentSegment.start) / arr.length) * (idx + 1)
+        }));
+        currentSegment.words = wordsArr;
+        
+        if (lines[i+1]?.trim() === "" || i === lines.length - 1) {
+          newSegments.push(currentSegment);
+          currentSegment = null;
+        }
+      }
+    }
+    return newSegments;
+  };
+
+  const handleUploadSrt = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    const srtFile = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const content = ev.target?.result as string;
+      const parsedSegments = parseSRT(content);
+      if (parsedSegments.length > 0) {
+        setSegments(parsedSegments);
+      }
+    };
+    reader.readAsText(srtFile);
+  };
+
+  const downloadSRT = () => {
+    let srtContent = "";
+    const formatTime = (seconds: number) => {
+      const date = new Date(seconds * 1000);
+      const hh = String(date.getUTCHours()).padStart(2, '0');
+      const mm = String(date.getUTCMinutes()).padStart(2, '0');
+      const ss = String(date.getUTCSeconds()).padStart(2, '0');
+      const ms = String(date.getUTCMilliseconds()).padStart(3, '0');
+      return `${hh}:${mm}:${ss},${ms}`;
+    };
+    segments.forEach((seg, i) => {
+      srtContent += `${i + 1}\n`;
+      srtContent += `${formatTime(seg.start)} --> ${formatTime(seg.end)}\n`;
+      srtContent += `${seg.text}\n\n`;
+    });
+    const blob = new Blob([srtContent], { type: 'text/srt' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'subtitles.srt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const shiftTime = (amount: number) => {
+    setSegments(segs => segs.map(s => ({
+      ...s,
+      start: Math.max(0, s.start + amount),
+      end: Math.max(0, s.end + amount),
+      words: s.words?.map((w: any) => ({
+        ...w,
+        start: Math.max(0, w.start + amount),
+        end: Math.max(0, w.end + amount)
+      })) || []
+    })));
+  };
+
+  const addSegment = (index: number) => {
+    const newSegs = [...segments];
+    const prevEnd = index > 0 ? newSegs[index - 1].end : 0;
+    const start = prevEnd;
+    const end = prevEnd + 2;
+    
+    newSegs.splice(index, 0, {
+      id: Date.now(),
+      start: start,
+      end: end,
+      text: "",
+      words: []
+    });
+    setSegments(newSegs);
+  };
+
+  const deleteSegment = (index: number) => {
+    const newSegs = [...segments];
+    newSegs.splice(index, 1);
+    setSegments(newSegs);
   };
 
   const handleExport = async () => {
@@ -242,10 +404,10 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020817] text-white font-sans selection:bg-[#0057ff]/30">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0057ff]/15 via-[#020817] to-[#020817] -z-10" />
+    <div className="min-h-screen bg-bg-main text-text-primary font-sans selection:bg-[#0057ff]/30">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0057ff]/15 via-bg-main to-bg-main -z-10" />
       
-      <header className="border-b border-white/10 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
+      <header className="border-b border-border-color bg-glass-bg backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="AutoCaps" className="h-8 object-contain" onError={(e) => { e.currentTarget.style.display='none' }} />
@@ -254,9 +416,21 @@ export default function Home() {
             </div>
           </div>
           <div className="flex gap-4 items-center">
+            <button 
+              onClick={() => setAppLang(appLang === "uk" ? "en" : "uk")}
+              className="flex items-center gap-2 text-sm font-medium hover:text-[#0057ff] transition-colors"
+            >
+              <Globe className="w-4 h-4" /> {appLang.toUpperCase()}
+            </button>
+            <button 
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="flex items-center gap-2 text-sm font-medium hover:text-[#0057ff] transition-colors"
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
             {videoUrl && (
               <label className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-medium transition-all cursor-pointer shadow-[0_0_15px_rgba(147,51,234,0.4)]">
-                <UploadCloud className="w-4 h-4" /> Add B-Roll
+                <UploadCloud className="w-4 h-4" /> {t.upload_video}
                 <input type="file" className="hidden" accept="image/*,video/*" onChange={handleUploadOverlay} />
               </label>
             )}
@@ -265,7 +439,7 @@ export default function Home() {
                 onClick={handleExport}
                 className="flex items-center gap-2 bg-[#0057ff] hover:bg-[#0046cc] text-white px-4 py-2 rounded-full font-medium transition-all active:scale-95 shadow-[0_0_15px_rgba(0,87,255,0.4)]"
               >
-                <Download className="w-4 h-4" /> Export Video
+                <Download className="w-4 h-4" /> {t.export_video}
               </button>
             )}
           </div>
@@ -294,9 +468,9 @@ export default function Home() {
                   <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#0057ff]/20 group-hover:text-[#0057ff] transition-all">
                     <UploadCloud className="w-8 h-8" />
                   </div>
-                  <div className="text-center">
-                    <p className="font-medium text-lg">Click to upload video</p>
-                    <p className="text-sm opacity-60">MP4, MOV, WebM</p>
+                  <div className="text-center text-text-secondary">
+                    <p className="font-medium text-lg text-text-primary">{t.click_upload}</p>
+                    <p className="text-sm opacity-60">{t.formats}</p>
                   </div>
                   <input type="file" className="hidden" accept="video/*" onChange={handleUpload} />
                 </label>
@@ -408,12 +582,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Editable Timeline Placeholder */}
-        {videoUrl && (
-          <div className="bg-black/40 border border-white/10 rounded-xl p-4 flex flex-col gap-2 overflow-hidden shadow-2xl relative mt-2">
+           {/* Editable Timeline Placeholder */}
+          {videoUrl && (
+            <div className="bg-bg-card border border-border-color rounded-xl p-4 flex flex-col gap-2 overflow-hidden shadow-2xl relative mt-2">
                {segments.length === 0 ? (
-                 <div className="text-slate-500 text-sm flex items-center gap-2 h-24 w-full justify-center border border-dashed border-white/10 rounded-lg">
-                   Generate subtitles to see the timeline
+                 <div className="text-text-secondary text-sm flex items-center gap-2 h-24 w-full justify-center border border-dashed border-border-color rounded-lg">
+                   {t.timeline_placeholder}
                  </div>
                ) : (
                  <div 
@@ -499,135 +673,110 @@ export default function Home() {
             </div>
           )}
 
-          {/* Overlays Editor */}
-          {overlays.length > 0 && (
-            <div className="bg-black/40 border border-purple-500/30 rounded-xl p-4 flex flex-col gap-3 shadow-2xl mt-2">
-              <h3 className="text-sm font-semibold text-purple-300 flex items-center gap-2">
-                <UploadCloud className="w-4 h-4" /> B-Roll Elements
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
-                {overlays.map((ov, i) => (
-                  <div key={ov.id} className="bg-white/5 border border-white/10 p-3 rounded-lg flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                      <img src={ov.url} className="w-12 h-12 rounded object-cover border border-white/20" />
-                      <div className="flex-1 flex flex-col gap-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <label className="text-xs text-slate-400">Start (s)</label>
-                          <input 
-                            type="number" step="0.1" min="0" max={duration}
-                            value={ov.start.toFixed(1)}
-                            onChange={(e) => {
-                              const newOvs = [...overlays];
-                              newOvs[i].start = parseFloat(e.target.value) || 0;
-                              setOverlays(newOvs);
-                            }}
-                            className="bg-black border border-white/20 rounded px-2 py-1 text-xs w-16 text-center text-white"
-                          />
-                        </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <label className="text-xs text-slate-400">End (s)</label>
-                          <input 
-                            type="number" step="0.1" min="0" max={duration}
-                            value={ov.end.toFixed(1)}
-                            onChange={(e) => {
-                              const newOvs = [...overlays];
-                              newOvs[i].end = parseFloat(e.target.value) || duration;
-                              setOverlays(newOvs);
-                            }}
-                            className="bg-black border border-white/20 rounded px-2 py-1 text-xs w-16 text-center text-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => setOverlays(overlays.filter(o => o.id !== ov.id))}
-                      className="w-full bg-red-500/20 hover:bg-red-500/40 text-red-300 text-xs py-1.5 rounded transition-colors"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* Right Column: Controls */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-xl">
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-6">
-              <Wand2 className="w-5 h-5 text-[#0057ff]" /> Generation
-            </h2>
-            
-            <div className="space-y-4">
+        <div className="lg:col-span-4 flex flex-col gap-4">
+          {/* Tabs Navigation */}
+          <div className="flex bg-bg-card border border-border-color rounded-2xl p-2 gap-2 shadow-xl backdrop-blur-xl overflow-x-auto custom-scrollbar">
+            <button 
+              onClick={() => setActiveTab('generation')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'generation' ? 'bg-[#0057ff] text-white shadow-lg' : 'text-text-secondary hover:bg-player-bg'}`}
+            >
+              <Wand2 className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_generation}</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('styling')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'styling' ? 'bg-[#0057ff] text-white shadow-lg' : 'text-text-secondary hover:bg-player-bg'}`}
+            >
+              <Settings className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_styling}</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('editor')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'editor' ? 'bg-[#0057ff] text-white shadow-lg' : 'text-text-secondary hover:bg-player-bg'}`}
+            >
+              <Type className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_editor}</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('overlays')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${activeTab === 'overlays' ? 'bg-[#0057ff] text-white shadow-lg' : 'text-text-secondary hover:bg-player-bg'}`}
+            >
+              <UploadCloud className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_overlays}</span>
+            </button>
+          </div>
+
+          <div className="bg-bg-card border border-border-color rounded-2xl p-6 backdrop-blur-xl shadow-xl flex-1 flex flex-col min-h-[500px]">
+            {activeTab === 'generation' && (
+              <div className="space-y-4 animate-in fade-in duration-300">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 mb-2 block">Source Language</label>
+                  <label className="text-sm text-text-secondary mb-2 block">{t.source_language}</label>
                   <select 
                     value={language} 
                     onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
                   >
-                    <option value="auto">Auto Detect</option>
-                    <option value="uk">Ukrainian</option>
-                    <option value="en">English</option>
-                    <option value="ru">Russian</option>
-                    <option value="sk">Slovak</option>
+                    <option value="auto">{t.auto_detect}</option>
+                    <option value="uk">{t.ukrainian}</option>
+                    <option value="en">{t.english}</option>
+                    <option value="ru">{t.russian}</option>
+                    <option value="sk">{t.slovak}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 mb-2 block">AI Level</label>
+                  <label className="text-sm text-text-secondary mb-2 block">{t.ai_level}</label>
                   <select 
                     value={modelSize} 
                     onChange={(e) => setModelSize(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
                   >
-                    <option value="small">Low (Швидко)</option>
-                    <option value="medium">Medium (Баланс)</option>
-                    <option value="large-v3">Hard (Ідеально)</option>
+                    <option value="small">{t.level_low}</option>
+                    <option value="medium">{t.level_medium}</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 mb-2 flex items-center gap-2">
-                  Vocabulary / Context (Optional)
+                <label className="text-sm text-text-secondary mb-2 flex items-center gap-2">
+                  {t.vocab_context}
                 </label>
                 <textarea 
                   value={prompt} 
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="e.g. John Doe, AutoCaps, specialized terms..."
-                  className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#0057ff] transition-colors h-20 resize-none text-sm custom-scrollbar"
+                  placeholder={t.placeholder}
+                  className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0057ff] transition-colors h-20 resize-none text-sm custom-scrollbar"
                 />
               </div>
 
-              <button 
-                onClick={handleGenerate}
-                disabled={!videoId || isGenerating}
-                className="w-full bg-[#0057ff] hover:bg-[#0046cc] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium p-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(0,87,255,0.4)]"
-              >
-                {isGenerating ? (
-                  <><span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" /> Processing...</>
-                ) : (
-                  <><Wand2 className="w-4 h-4" /> Auto Generate</>
-                )}
-              </button>
+              <div className="flex flex-col gap-2">
+                <button 
+                  onClick={handleGenerate}
+                  disabled={!videoId || isGenerating}
+                  className="w-full bg-[#0057ff] hover:bg-[#0046cc] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium p-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(0,87,255,0.4)] relative overflow-hidden"
+                >
+                  {isGenerating && generateProgress > 0 && (
+                    <div className="absolute left-0 top-0 bottom-0 bg-white/20 transition-all duration-300" style={{ width: `${generateProgress}%` }} />
+                  )}
+                  {isGenerating ? (
+                    <span className="relative z-10 flex items-center gap-2"><span className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" /> {t.processing} {generateProgress > 0 ? `${generateProgress}%` : ''}</span>
+                  ) : (
+                    <span className="relative z-10 flex items-center gap-2"><Wand2 className="w-4 h-4" /> {t.auto_generate}</span>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
-
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl flex-1 shadow-xl">
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-6">
-              <Settings className="w-5 h-5 text-cyan-400" /> Styling
-            </h2>
+            )}
             
-            <div className="space-y-6">
+            {activeTab === 'styling' && (
+              <div className="space-y-6 animate-in fade-in duration-300">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 mb-2 flex items-center gap-2"><Type className="w-4 h-4"/> Font</label>
+                  <label className="text-sm text-text-secondary mb-2 flex items-center gap-2"><Type className="w-4 h-4"/> {t.font}</label>
                   <select 
                     value={styles.font_name}
                     onChange={(e) => setStyles({...styles, font_name: e.target.value})}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
                   >
                     <option value="Arial">Arial</option>
                     <option value="Impact">Impact</option>
@@ -636,67 +785,67 @@ export default function Home() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 mb-2 flex items-center gap-2"><AlignCenter className="w-4 h-4"/> Position</label>
+                  <label className="text-sm text-text-secondary mb-2 flex items-center gap-2"><AlignCenter className="w-4 h-4"/> {t.position}</label>
                   <select 
                     value={styles.position}
                     onChange={(e) => setStyles({...styles, position: e.target.value})}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
                   >
-                    <option value="Bottom">Bottom</option>
-                    <option value="Middle">Middle</option>
-                    <option value="Top">Top</option>
+                    <option value="Bottom">{t.bottom}</option>
+                    <option value="Middle">{t.middle}</option>
+                    <option value="Top">{t.top}</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 mb-2 block">Animation Effect</label>
+                <label className="text-sm text-text-secondary mb-2 block">{t.anim_effect}</label>
                 <select 
                   value={styles.effect}
                   onChange={(e) => setStyles({...styles, effect: e.target.value})}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none mb-6"
+                  className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none mb-6"
                 >
-                  <option value="karaoke">Karaoke (Sweep)</option>
-                  <option value="highlight">Highlight Active Word</option>
-                  <option value="reveal">Word Reveal (Pop in)</option>
+                  <option value="karaoke">{t.effect_karaoke}</option>
+                  <option value="highlight">{t.effect_highlight}</option>
+                  <option value="reveal">{t.effect_reveal}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 mb-2 block">Font Size ({styles.font_size}%)</label>
+                <label className="text-sm text-text-secondary mb-2 block">{t.font_size} ({styles.font_size}%)</label>
                 <input 
                   type="range" 
                   min="1" max="40" step="0.5"
                   value={styles.font_size}
                   onChange={(e) => setStyles({...styles, font_size: parseFloat(e.target.value)})}
-                  className="w-full accent-cyan-500 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                  className="w-full accent-cyan-500 h-2 bg-border-color rounded-lg appearance-none cursor-pointer"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 mb-2 flex items-center gap-2">Words / Line</label>
+                  <label className="text-sm text-text-secondary mb-2 flex items-center gap-2">{t.words_line}</label>
                   <input 
                     type="number" min="1" max="15"
                     value={styles.words_per_line}
                     onChange={(e) => setStyles({...styles, words_per_line: parseInt(e.target.value)})}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 mb-2 flex items-center gap-2">Max Lines</label>
+                  <label className="text-sm text-text-secondary mb-2 flex items-center gap-2">{t.max_lines}</label>
                   <input 
                     type="number" min="1" max="5"
                     value={styles.max_lines}
                     onChange={(e) => setStyles({...styles, max_lines: parseInt(e.target.value)})}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 mb-2 flex items-center gap-2"><Palette className="w-4 h-4"/> Main Color</label>
+                  <label className="text-sm text-text-secondary mb-2 flex items-center gap-2"><Palette className="w-4 h-4"/> {t.main_color}</label>
                   <div className="flex gap-2 items-center">
                     <input 
                       type="color" 
@@ -708,7 +857,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 mb-2 flex items-center gap-2"><Palette className="w-4 h-4"/> Highlight</label>
+                  <label className="text-sm text-text-secondary mb-2 flex items-center gap-2"><Palette className="w-4 h-4"/> {t.highlight}</label>
                   <div className="flex gap-2 items-center">
                     <input 
                       type="color" 
@@ -720,7 +869,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 mb-2 flex items-center gap-2"><Palette className="w-4 h-4"/> Outline (Stroke)</label>
+                  <label className="text-sm text-text-secondary mb-2 flex items-center gap-2"><Palette className="w-4 h-4"/> {t.outline}</label>
                   <div className="flex gap-2 items-center">
                     <input 
                       type="color" 
@@ -733,6 +882,161 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            )}
+
+            {activeTab === 'editor' && (
+              <div className="flex flex-col flex-1 h-full max-h-[600px] animate-in fade-in duration-300">
+                <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => addSegment(segments.length)}
+                      className="flex items-center gap-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-500 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                    >
+                      <span className="text-lg leading-none">+</span> {t.add_segment}
+                    </button>
+                    <button 
+                      onClick={() => shiftTime(-1)}
+                      className="flex items-center gap-1.5 bg-player-bg hover:bg-border-color text-text-primary px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                    >
+                      {t.shift_backward}
+                    </button>
+                    <button 
+                      onClick={() => shiftTime(1)}
+                      className="flex items-center gap-1.5 bg-player-bg hover:bg-border-color text-text-primary px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                    >
+                      {t.shift_forward}
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-500 px-3 py-1.5 rounded text-sm font-medium transition-colors cursor-pointer">
+                      <UploadCloud className="w-4 h-4" /> {t.upload_srt}
+                      <input type="file" className="hidden" accept=".srt" onChange={handleUploadSrt} />
+                    </label>
+                    <button 
+                      onClick={downloadSRT}
+                      disabled={segments.length === 0}
+                      className="flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-blue-500 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                    >
+                      <Download className="w-4 h-4" /> {t.download_srt}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2">
+                  {segments.length === 0 ? (
+                    <div className="text-center text-text-secondary text-sm py-8 border border-dashed border-border-color rounded-lg">
+                      {t.generate_first}
+                    </div>
+                  ) : (
+                    segments.map((seg, idx) => (
+                      <div key={seg.id || idx} className="bg-player-bg border border-border-color rounded-lg p-3 group relative">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-mono text-text-secondary flex gap-2">
+                            <input 
+                              type="number" step="0.1" min="0" 
+                              value={seg.start.toFixed(1)} 
+                              onChange={(e) => {
+                                const newSegs = [...segments];
+                                newSegs[idx].start = parseFloat(e.target.value) || 0;
+                                setSegments(newSegs);
+                              }}
+                              className="w-14 bg-transparent border-b border-border-color focus:border-[#0057ff] outline-none" 
+                            />
+                            {' --> '} 
+                            <input 
+                              type="number" step="0.1" min="0" 
+                              value={seg.end.toFixed(1)} 
+                              onChange={(e) => {
+                                const newSegs = [...segments];
+                                newSegs[idx].end = parseFloat(e.target.value) || 0;
+                                setSegments(newSegs);
+                              }}
+                              className="w-14 bg-transparent border-b border-border-color focus:border-[#0057ff] outline-none" 
+                            />
+                          </span>
+                          <button 
+                            onClick={() => deleteSegment(idx)}
+                            className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20 p-1 rounded"
+                            title={t.delete_segment}
+                          >
+                            ×
+                          </button>
+                        </div>
+                    <textarea 
+                      value={seg.text}
+                      onChange={(e) => {
+                        const newSegs = [...segments];
+                        newSegs[idx].text = e.target.value;
+                        setSegments(newSegs);
+                      }}
+                      className="w-full bg-transparent text-text-primary focus:outline-none resize-none text-sm"
+                      rows={2}
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+            </div>
+            )}
+
+            {activeTab === 'overlays' && (
+              <div className="flex flex-col flex-1 h-full animate-in fade-in duration-300">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold flex items-center gap-2 text-text-primary">
+                    <UploadCloud className="w-5 h-5 text-purple-400" /> {t.b_roll_elements}
+                  </h2>
+                </div>
+                {overlays.length === 0 ? (
+                  <div className="text-center text-text-secondary text-sm py-8 border border-dashed border-border-color rounded-lg">
+                    Upload B-Roll video or images using the button on the left to see them here.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto custom-scrollbar pr-2 max-h-[500px]">
+                    {overlays.map((ov, i) => (
+                      <div key={ov.id} className="bg-player-bg border border-border-color p-3 rounded-lg flex flex-col gap-3">
+                        <div className="flex items-center gap-3">
+                          <img src={ov.url} className="w-16 h-16 rounded object-cover border border-border-color" />
+                          <div className="flex-1 flex flex-col gap-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-xs text-text-secondary">{t.start}</label>
+                              <input 
+                                type="number" step="0.1" min="0" max={duration}
+                                value={ov.start.toFixed(1)}
+                                onChange={(e) => {
+                                  const newOvs = [...overlays];
+                                  newOvs[i].start = parseFloat(e.target.value) || 0;
+                                  setOverlays(newOvs);
+                                }}
+                                className="bg-bg-card border border-border-color rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-purple-500"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-xs text-text-secondary">{t.end}</label>
+                              <input 
+                                type="number" step="0.1" min="0" max={duration}
+                                value={ov.end.toFixed(1)}
+                                onChange={(e) => {
+                                  const newOvs = [...overlays];
+                                  newOvs[i].end = parseFloat(e.target.value) || duration;
+                                  setOverlays(newOvs);
+                                }}
+                                className="bg-bg-card border border-border-color rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-purple-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => setOverlays(overlays.filter(o => o.id !== ov.id))}
+                          className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs py-1.5 rounded transition-colors font-medium"
+                        >
+                          {t.remove}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
         </div>
