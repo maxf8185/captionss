@@ -109,10 +109,12 @@ class GenerateRequest(BaseModel):
 
 class StyleOptions(BaseModel):
     font_name: str = "Arial"
-    font_size: int = 42
+    font_size: float = 7.0
     primary_color: str = "#FFFFFF"
     highlight_color: str = "#FBBF24"
+    outline_color: str = "#000000"
     position: str = "Bottom"
+    effect: str = "karaoke"
     words_per_line: int = 5
     max_lines: int = 2
 
@@ -218,6 +220,11 @@ def generate_ass_file(segments: List[dict], styles: StyleOptions, ass_path: str,
 
     primary = hex_to_ass(styles.primary_color)
     highlight = hex_to_ass(styles.highlight_color)
+    outline = hex_to_ass(styles.outline_color)
+    
+    actual_font_size = int(video_height * (styles.font_size / 100.0))
+    outline_size = max(1, int(actual_font_size * 0.06))
+    shadow_size = max(1, int(actual_font_size * 0.05))
 
     ass_content = f"""[Script Info]
 ScriptType: v4.00+
@@ -226,7 +233,7 @@ PlayResY: {video_height}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,{styles.font_name},{styles.font_size},{primary},{highlight},&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,0,{alignment},10,10,50,1
+Style: Default,{styles.font_name},{actual_font_size},{primary},{highlight},{outline},&H80000000,-1,0,0,0,100,100,0,0,1,{outline_size},{shadow_size},{alignment},10,10,50,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -264,18 +271,37 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             
         for screen in screens:
             if not screen or not screen[0]: continue
-            start_time = format_time(screen[0][0]['start'])
-            end_time = format_time(screen[-1][-1]['end'])
             
-            text_karaoke = ""
-            for i, line in enumerate(screen):
-                for word in line:
-                    dur_cs = int((word['end'] - word['start']) * 100)
-                    text_karaoke += f"{{\\K{dur_cs}}}{word['word']} "
-                if i < len(screen) - 1:
-                    text_karaoke = text_karaoke.strip() + "\\N"
+            if styles.effect == "karaoke":
+                start_time = format_time(screen[0][0]['start'])
+                end_time = format_time(screen[-1][-1]['end'])
+                text_karaoke = ""
+                for i, line in enumerate(screen):
+                    for word in line:
+                        dur_cs = int((word['end'] - word['start']) * 100)
+                        text_karaoke += f"{{\\K{dur_cs}}}{word['word']} "
+                    if i < len(screen) - 1:
+                        text_karaoke = text_karaoke.strip() + "\\N"
+                ass_content += f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text_karaoke.strip()}\n"
+            else:
+                words_in_screen = [w for line in screen for w in line]
+                for i, active_w in enumerate(words_in_screen):
+                    w_start = format_time(active_w['start'])
+                    w_end = format_time(words_in_screen[i+1]['start']) if i + 1 < len(words_in_screen) else format_time(active_w['end'])
                     
-            ass_content += f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text_karaoke.strip()}\n"
+                    text_layer = ""
+                    for i_line, line in enumerate(screen):
+                        line_str = ""
+                        for w in line:
+                            if w == active_w:
+                                line_str += f"{{\\c{highlight}}}{w['word']}{{\\c{primary}}} "
+                            elif styles.effect == "reveal" and w['start'] > active_w['start']:
+                                line_str += f"{{\\alpha&HFF&}}{w['word']}{{\\alpha}} "
+                            else:
+                                line_str += f"{w['word']} "
+                        text_layer += line_str.strip() + "\\N"
+                    
+                    ass_content += f"Dialogue: 0,{w_start},{w_end},Default,,0,0,0,,{text_layer.strip()}\n"
 
     with open(ass_path, "w", encoding="utf-8") as f:
         f.write(ass_content)

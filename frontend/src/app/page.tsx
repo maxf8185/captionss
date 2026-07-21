@@ -36,10 +36,12 @@ export default function Home() {
   
   const [styles, setStyles] = useState({
     font_name: "Arial",
-    font_size: 42,
+    font_size: 7, // Percentage of video height
     primary_color: "#FFFFFF",
     highlight_color: "#0ea5e9", // sky-500
+    outline_color: "#000000",
     position: "Bottom",
+    effect: "karaoke", // karaoke, highlight, reveal
     words_per_line: 5,
     max_lines: 2,
   });
@@ -317,9 +319,19 @@ export default function Home() {
                       justifyContent: "center",
                       paddingTop: styles.position === "Top" ? "10%" : "0",
                       paddingBottom: styles.position === "Bottom" ? "10%" : "0",
+                      containerType: "size", // Makes cqh relative to this container (which matches the video)
                     }}
                   >
-                    <div className="text-center w-full px-4" style={{ fontFamily: styles.font_name, fontSize: `${styles.font_size}px`, lineHeight: 1.2 }}>
+                    <div 
+                      className="text-center w-full px-4" 
+                      style={{ 
+                        fontFamily: styles.font_name, 
+                        fontSize: `${styles.font_size}cqh`, 
+                        lineHeight: 1.2,
+                        WebkitTextStroke: `0.06em ${styles.outline_color}`,
+                        textShadow: `0px 0.05em 0.3em rgba(0,0,0,0.8), 0px 0px 0.1em ${styles.outline_color}`
+                      }}
+                    >
                       {(() => {
                         // Implement backend screen splitting logic
                         const screens: any[][][] = [];
@@ -358,13 +370,27 @@ export default function Home() {
                           <div key={lineIndex}>
                             {line.map((w: any, wIndex: number) => {
                               const isActive = currentTime >= w.start && currentTime <= w.end;
+                              const isPast = currentTime > w.end;
+                              
+                              let color = styles.primary_color;
+                              let opacity = 1;
+                              
+                              if (styles.effect === "karaoke") {
+                                color = isActive || isPast ? styles.primary_color : styles.highlight_color;
+                              } else if (styles.effect === "highlight") {
+                                color = isActive ? styles.highlight_color : styles.primary_color;
+                              } else if (styles.effect === "reveal") {
+                                color = isActive ? styles.highlight_color : styles.primary_color;
+                                opacity = isActive || isPast ? 1 : 0;
+                              }
+
                               return (
                                 <span 
                                   key={wIndex}
                                   style={{ 
-                                    color: isActive ? styles.highlight_color : styles.primary_color,
-                                    textShadow: "0px 2px 10px rgba(0,0,0,0.8), 0px 0px 4px rgba(0,0,0,1)",
-                                    transition: "color 0.15s ease"
+                                    color: color,
+                                    opacity: opacity,
+                                    transition: "color 0.15s ease, opacity 0.1s ease"
                                   }}
                                   className="inline-block mx-[0.1em] font-bold break-words"
                                 >
@@ -624,12 +650,25 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 mb-2 block">Font Size ({styles.font_size}px)</label>
+                <label className="text-sm text-slate-400 mb-2 block">Animation Effect</label>
+                <select 
+                  value={styles.effect}
+                  onChange={(e) => setStyles({...styles, effect: e.target.value})}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none mb-6"
+                >
+                  <option value="karaoke">Karaoke (Sweep)</option>
+                  <option value="highlight">Highlight Active Word</option>
+                  <option value="reveal">Word Reveal (Pop in)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-400 mb-2 block">Font Size ({styles.font_size}%)</label>
                 <input 
                   type="range" 
-                  min="16" max="96" 
+                  min="1" max="20" step="0.5"
                   value={styles.font_size}
-                  onChange={(e) => setStyles({...styles, font_size: parseInt(e.target.value)})}
+                  onChange={(e) => setStyles({...styles, font_size: parseFloat(e.target.value)})}
                   className="w-full accent-cyan-500 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
@@ -678,6 +717,18 @@ export default function Home() {
                       className="w-10 h-10 rounded cursor-pointer bg-transparent border-0 p-0"
                     />
                     <span className="text-xs font-mono text-cyan-400 bg-black/40 px-2 py-1 rounded">{styles.highlight_color}</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-slate-400 mb-2 flex items-center gap-2"><Palette className="w-4 h-4"/> Outline (Stroke)</label>
+                  <div className="flex gap-2 items-center">
+                    <input 
+                      type="color" 
+                      value={styles.outline_color}
+                      onChange={(e) => setStyles({...styles, outline_color: e.target.value})}
+                      className="w-10 h-10 rounded cursor-pointer bg-transparent border-0 p-0"
+                    />
+                    <span className="text-xs font-mono text-cyan-400 bg-black/40 px-2 py-1 rounded">{styles.outline_color}</span>
                   </div>
                 </div>
               </div>
