@@ -22,6 +22,7 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
   const [overlays, setOverlays] = useState<Overlay[]>([]);
+  const [videoAspect, setVideoAspect] = useState<number | null>(null);
   
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1500);
@@ -52,7 +53,12 @@ export default function Home() {
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
-    const handleLoadedMetadata = () => setDuration(video.duration);
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration);
+      if (video.videoWidth && video.videoHeight) {
+        setVideoAspect(video.videoWidth / video.videoHeight);
+      }
+    };
 
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("play", handlePlay);
@@ -297,38 +303,77 @@ export default function Home() {
                 />
                 
                 {/* Custom Subtitle Overlay */}
-                {activeSegment && (
+                {activeSegment && videoAspect && (
                   <div 
-                    className="absolute left-0 right-0 pointer-events-none flex justify-center px-12"
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex"
                     style={{
-                      bottom: styles.position === "Bottom" ? "10%" : "auto",
-                      top: styles.position === "Top" ? "10%" : "auto",
-                      alignItems: styles.position === "Middle" ? "center" : "auto",
-                      height: styles.position === "Middle" ? "100%" : "auto",
+                      aspectRatio: videoAspect,
+                      maxHeight: "100%",
+                      maxWidth: "100%",
+                      width: videoAspect > 1 ? "100%" : "auto",
+                      height: videoAspect > 1 ? "auto" : "100%",
+                      alignItems: styles.position === "Top" ? "flex-start" : styles.position === "Middle" ? "center" : "flex-end",
+                      justifyContent: "center",
+                      paddingTop: styles.position === "Top" ? "10%" : "0",
+                      paddingBottom: styles.position === "Bottom" ? "10%" : "0",
                     }}
                   >
-                    <div className="text-center max-w-3xl" style={{ fontFamily: styles.font_name, fontSize: `${styles.font_size}px`, lineHeight: 1.2 }}>
-                      {/* Note: This is a simplified preview. It doesn't strictly break into lines based on max_lines visually, 
-                          but the backend rendering does. */}
-                      {activeSegment.words.map((w: any, i: number) => {
-                        const isActive = currentTime >= w.start && currentTime <= w.end;
-                        return (
-                          <React.Fragment key={i}>
-                            <span 
-                              style={{ 
-                                color: isActive ? styles.highlight_color : styles.primary_color,
-                                textShadow: "0px 2px 10px rgba(0,0,0,0.8), 0px 0px 4px rgba(0,0,0,1)",
-                                transition: "color 0.15s ease"
-                              }}
-                              className="inline-block mx-[0.1em] font-bold"
-                            >
-                              {w.word}
-                            </span>
-                            {/* Simple line break preview based on words_per_line */}
-                            {(i + 1) % styles.words_per_line === 0 && <br />}
-                          </React.Fragment>
-                        )
-                      })}
+                    <div className="text-center w-full px-4" style={{ fontFamily: styles.font_name, fontSize: `${styles.font_size}px`, lineHeight: 1.2 }}>
+                      {(() => {
+                        // Implement backend screen splitting logic
+                        const screens: any[][][] = [];
+                        let current_screen: any[][] = [];
+                        let current_line: any[] = [];
+                        
+                        for (const word of activeSegment.words) {
+                          current_line.push(word);
+                          if (current_line.length >= styles.words_per_line) {
+                            current_screen.push(current_line);
+                            current_line = [];
+                            if (current_screen.length >= styles.max_lines) {
+                              screens.push(current_screen);
+                              current_screen = [];
+                            }
+                          }
+                        }
+                        if (current_line.length > 0) current_screen.push(current_line);
+                        if (current_screen.length > 0) screens.push(current_screen);
+                        
+                        // Find the active screen
+                        let activeScreen = screens.find(screen => {
+                          const start = screen[0][0].start;
+                          const end = screen[screen.length - 1][screen[screen.length - 1].length - 1].end;
+                          return currentTime >= start && currentTime <= end;
+                        });
+                        
+                        // If no screen is strictly active (e.g. between words), pick the closest one or just the last one we were in
+                        if (!activeScreen && screens.length > 0) {
+                           activeScreen = screens.find(screen => currentTime <= screen[screen.length - 1][screen[screen.length - 1].length - 1].end) || screens[screens.length - 1];
+                        }
+
+                        if (!activeScreen) return null;
+
+                        return activeScreen.map((line, lineIndex) => (
+                          <div key={lineIndex}>
+                            {line.map((w: any, wIndex: number) => {
+                              const isActive = currentTime >= w.start && currentTime <= w.end;
+                              return (
+                                <span 
+                                  key={wIndex}
+                                  style={{ 
+                                    color: isActive ? styles.highlight_color : styles.primary_color,
+                                    textShadow: "0px 2px 10px rgba(0,0,0,0.8), 0px 0px 4px rgba(0,0,0,1)",
+                                    transition: "color 0.15s ease"
+                                  }}
+                                  className="inline-block mx-[0.1em] font-bold break-words"
+                                >
+                                  {w.word}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
                 )}
