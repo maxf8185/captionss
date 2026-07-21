@@ -3,6 +3,7 @@ import shutil
 import uuid
 import json
 import subprocess
+import re
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -64,6 +65,28 @@ def get_model():
 def get_ffmpeg_path():
     return imageio_ffmpeg.get_ffmpeg_exe()
 
+def get_video_dimensions(video_path: str, ffmpeg_exe: str):
+    try:
+        creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+        result = subprocess.run([ffmpeg_exe, "-i", video_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=creation_flags)
+        output = result.stderr
+        
+        match = re.search(r'Video:.*?\s(\d{3,4})x(\d{3,4})[\s,]', output)
+        if match:
+            width = int(match.group(1))
+            height = int(match.group(2))
+            
+            rotation_match = re.search(r'rotate\s*:\s*(\d+)', output)
+            if rotation_match:
+                rotation = int(rotation_match.group(1))
+                if rotation in [90, 270]:
+                    width, height = height, width
+                    
+            return width, height
+    except Exception as e:
+        print(f"Error getting dimensions: {e}")
+    return 1920, 1080
+
 class WordTimestamps(BaseModel):
     word: str
     start: float
@@ -79,6 +102,7 @@ class SubtitleSegment(BaseModel):
 class GenerateRequest(BaseModel):
     video_id: str
     language: str
+    prompt: str = ""
 
 class StyleOptions(BaseModel):
     font_name: str = "Arial"
@@ -124,7 +148,9 @@ async def generate_subtitles(req: GenerateRequest):
     subprocess.run([ffmpeg_exe, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags)
     
     lang = req.language if req.language != 'auto' else None
-    segments, info = whisper_model.transcribe(audio_path, language=lang, word_timestamps=True)
+    initial_prompt = req.prompt if req.prompt and len(req.prompt.strip()) > 0 else None
+    
+    segments, info = whisper_model.transcribe(audio_path, language=lang, word_timestamps=True, initial_prompt=initial_prompt)
     
     result_segments = []
     seg_id = 1
@@ -150,7 +176,7 @@ async def generate_subtitles(req: GenerateRequest):
         
     return {"segments": result_segments, "detected_language": info.language}
 
-def generate_ass_file(segments: List[dict], styles: StyleOptions, ass_path: str):
+def generate_ass_file(segments: List[dict], styles: StyleOptions, ass_path: str, video_width: int, video_height: int):
     alignment = 2
     if styles.position.lower() == "top":
         alignment = 8
@@ -170,8 +196,8 @@ def generate_ass_file(segments: List[dict], styles: StyleOptions, ass_path: str)
 
     ass_content = f"""[Script Info]
 ScriptType: v4.00+
-PlayResX: 1920
-PlayResY: 1080
+PlayResX: {video_width}
+PlayResY: {video_height}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
@@ -189,17 +215,42 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
 
     for seg in segments:
-        start_time = format_time(seg['start'])
-        end_time = format_time(seg['end'])
-        
-        text_karaoke = ""
-        last_time = seg['start']
-        for word in seg['words']:
-            dur_cs = int((word['end'] - word['start']) * 100)
-            text_karaoke += f"{{\\K{dur_cs}}}{word['word']} "
-            last_time = word['end']
+        words = seg.get('words', [])
+        if not words:
+            continue
             
-        ass_content += f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text_karaoke.strip()}\n"
+        screens = []
+        current_screen = []
+        current_line = []
+        
+        for word in words:
+            current_line.append(word)
+            if len(current_line) >= styles.words_per_line:
+                current_screen.append(current_line)
+                current_line = []
+                if len(current_screen) >= styles.max_lines:
+                    screens.append(current_screen)
+                    current_screen = []
+        
+        if current_line:
+            current_screen.append(current_line)
+        if current_screen:
+            screens.append(current_screen)
+            
+        for screen in screens:
+            if not screen or not screen[0]: continue
+            start_time = format_time(screen[0][0]['start'])
+            end_time = format_time(screen[-1][-1]['end'])
+            
+            text_karaoke = ""
+            for i, line in enumerate(screen):
+                for word in line:
+                    dur_cs = int((word['end'] - word['start']) * 100)
+                    text_karaoke += f"{{\\K{dur_cs}}}{word['word']} "
+                if i < len(screen) - 1:
+                    text_karaoke = text_karaoke.strip() + "\\N"
+                    
+            ass_content += f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text_karaoke.strip()}\n"
 
     with open(ass_path, "w", encoding="utf-8") as f:
         f.write(ass_content)
@@ -215,15 +266,17 @@ async def export_video(req: ExportRequest):
     if not video_path:
         raise HTTPException(status_code=404, detail="Video not found")
         
+    ffmpeg_exe = get_ffmpeg_path()
+    video_width, video_height = get_video_dimensions(video_path, ffmpeg_exe)
+        
     ass_path = os.path.join(OUTPUT_DIR, f"{req.video_id}.ass")
-    generate_ass_file([s.dict() for s in req.segments], req.styles, ass_path)
+    generate_ass_file([s.dict() for s in req.segments], req.styles, ass_path, video_width, video_height)
     
     out_video_path = os.path.join(OUTPUT_DIR, f"{req.video_id}_final.mp4")
     
     abs_ass_path = os.path.abspath(ass_path).replace("\\", "/")
     abs_ass_path = abs_ass_path.replace(":", "\\:")
     
-    ffmpeg_exe = get_ffmpeg_path()
     creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
     
     try:
@@ -231,6 +284,7 @@ async def export_video(req: ExportRequest):
             ffmpeg_exe, "-y", 
             "-i", video_path, 
             "-vf", f"ass='{abs_ass_path}'", 
+            "-c:v", "libx264", "-crf", "18", "-preset", "fast",
             "-c:a", "copy",
             out_video_path
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags)
