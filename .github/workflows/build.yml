@@ -44,7 +44,7 @@ jobs:
         
     - name: Build Installer with Inno Setup
       run: |
-        "C:\Program Files (x86)\Inno Setup 6\iscc.exe" installer.iss
+        & "C:\Program Files (x86)\Inno Setup 6\iscc.exe" installer.iss
         
     - name: Create Release
       uses: softprops/action-gh-release@v2
