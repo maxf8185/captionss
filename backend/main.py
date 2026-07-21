@@ -114,6 +114,8 @@ class StyleOptions(BaseModel):
     highlight_color: str = "#FBBF24"
     outline_color: str = "#000000"
     position: str = "Bottom"
+    pos_x: float = 50.0
+    pos_y: float = 90.0
     effect: str = "karaoke"
     words_per_line: int = 5
     max_lines: int = 2
@@ -211,11 +213,7 @@ async def generate_subtitles(req: GenerateRequest):
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")
 
 def generate_ass_file(segments: List[dict], styles: StyleOptions, ass_path: str, video_width: int, video_height: int):
-    alignment = 2
-    if styles.position.lower() == "top":
-        alignment = 8
-    elif styles.position.lower() == "middle":
-        alignment = 5
+    alignment = 5 # Center middle alignment for precise positioning
         
     def hex_to_ass(hex_color):
         if hex_color.startswith("#"):
@@ -276,6 +274,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         if current_screen:
             screens.append(current_screen)
             
+        pos_x_px = int(video_width * (styles.pos_x / 100.0))
+        pos_y_px = int(video_height * (styles.pos_y / 100.0))
+        pos_tag = f"{{\\pos({pos_x_px},{pos_y_px})}}"
+        
         for screen in screens:
             if not screen or not screen[0]: continue
             
@@ -289,7 +291,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                         text_karaoke += f"{{\\K{dur_cs}}}{word['word']} "
                     if i < len(screen) - 1:
                         text_karaoke = text_karaoke.strip() + "\\N"
-                ass_content += f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text_karaoke.strip()}\n"
+                ass_content += f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{pos_tag}{text_karaoke.strip()}\n"
             else:
                 words_in_screen = [w for line in screen for w in line]
                 for i, active_w in enumerate(words_in_screen):
@@ -308,7 +310,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                                 line_str += f"{w['word']} "
                         text_layer += line_str.strip() + "\\N"
                     
-                    ass_content += f"Dialogue: 0,{w_start},{w_end},Default,,0,0,0,,{text_layer.strip()}\n"
+                    ass_content += f"Dialogue: 0,{w_start},{w_end},Default,,0,0,0,,{pos_tag}{text_layer.strip()}\n"
 
     with open(ass_path, "w", encoding="utf-8") as f:
         f.write(ass_content)

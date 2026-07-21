@@ -32,6 +32,7 @@ export default function Home() {
   const [showSplash, setShowSplash] = useState(true);
   const [overlays, setOverlays] = useState<Overlay[]>([]);
   const [videoAspect, setVideoAspect] = useState<number | null>(null);
+  const [isDraggingText, setIsDraggingText] = useState(false);
   
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1500);
@@ -57,6 +58,8 @@ export default function Home() {
     highlight_color: "#0ea5e9", // sky-500
     outline_color: "#000000",
     position: "Bottom",
+    pos_x: 50,
+    pos_y: 90,
     effect: "karaoke", // karaoke, highlight, reveal
     words_per_line: 5,
     max_lines: 2,
@@ -486,23 +489,37 @@ export default function Home() {
                   {/* Custom Subtitle Overlay */}
                   {activeSegment && videoAspect && (
                     <div 
-                      className="absolute inset-0 pointer-events-none flex"
+                      className="absolute inset-0 pointer-events-none"
                       style={{
-                        alignItems: styles.position === "Top" ? "flex-start" : styles.position === "Middle" ? "center" : "flex-end",
-                        justifyContent: "center",
-                        paddingTop: styles.position === "Top" ? "10%" : "0",
-                        paddingBottom: styles.position === "Bottom" ? "10%" : "0",
                         containerType: "size", // Makes cqh relative to this container (which exactly matches the video)
                       }}
+                      onPointerMove={(e) => {
+                         if (!isDraggingText) return;
+                         const rect = e.currentTarget.getBoundingClientRect();
+                         const x = ((e.clientX - rect.left) / rect.width) * 100;
+                         const y = ((e.clientY - rect.top) / rect.height) * 100;
+                         setStyles(s => ({ ...s, pos_x: Math.max(0, Math.min(100, x)), pos_y: Math.max(0, Math.min(100, y)) }));
+                      }}
+                      onPointerUp={() => setIsDraggingText(false)}
+                      onPointerLeave={() => setIsDraggingText(false)}
                     >
                     <div 
-                      className="text-center w-full px-4" 
+                      className={`absolute text-center px-4 pointer-events-auto cursor-move ${isDraggingText ? 'ring-2 ring-dashed ring-[#0057ff] bg-black/20 rounded' : 'hover:ring-2 hover:ring-dashed hover:ring-white/50 rounded'}`} 
                       style={{ 
+                        left: `${styles.pos_x}%`,
+                        top: `${styles.pos_y}%`,
+                        transform: 'translate(-50%, -50%)',
+                        width: 'max-content',
+                        maxWidth: '90%',
                         fontFamily: styles.font_name, 
                         fontSize: `${styles.font_size}cqh`, 
                         lineHeight: 1.2,
                         WebkitTextStroke: `0.06em ${styles.outline_color}`,
                         textShadow: `0px 0.05em 0.3em rgba(0,0,0,0.8), 0px 0px 0.1em ${styles.outline_color}`
+                      }}
+                      onPointerDown={(e) => {
+                         setIsDraggingText(true);
+                         e.stopPropagation();
                       }}
                     >
                       {(() => {
@@ -799,13 +816,19 @@ export default function Home() {
                 <div>
                   <label className="text-sm text-text-secondary mb-2 flex items-center gap-2"><AlignCenter className="w-4 h-4"/> {t.position}</label>
                   <select 
-                    value={styles.position}
-                    onChange={(e) => setStyles({...styles, position: e.target.value})}
+                    value={styles.pos_y === 90 ? "Bottom" : styles.pos_y === 50 ? "Middle" : styles.pos_y === 10 ? "Top" : "Custom"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "Bottom") setStyles({...styles, position: val, pos_y: 90});
+                      else if (val === "Middle") setStyles({...styles, position: val, pos_y: 50});
+                      else if (val === "Top") setStyles({...styles, position: val, pos_y: 10});
+                    }}
                     className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
                   >
                     <option value="Bottom">{t.bottom}</option>
                     <option value="Middle">{t.middle}</option>
                     <option value="Top">{t.top}</option>
+                    <option value="Custom" disabled>Custom</option>
                   </select>
                 </div>
               </div>
