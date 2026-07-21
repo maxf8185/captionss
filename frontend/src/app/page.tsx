@@ -575,16 +575,15 @@ export default function Home() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 mb-2 block">AI Model Size</label>
+                  <label className="text-sm text-slate-400 mb-2 block">AI Level</label>
                   <select 
                     value={modelSize} 
                     onChange={(e) => setModelSize(e.target.value)}
                     className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
                   >
-                    <option value="base">Base (Fast, Less Accurate)</option>
-                    <option value="small">Small (Balanced)</option>
-                    <option value="medium">Medium (Slow, Accurate)</option>
-                    <option value="large-v3">Large V3 (Best Quality)</option>
+                    <option value="small">Low (Швидко)</option>
+                    <option value="medium">Medium (Баланс)</option>
+                    <option value="large-v3">Hard (Ідеально)</option>
                   </select>
                 </div>
               </div>
