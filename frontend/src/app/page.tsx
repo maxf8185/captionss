@@ -399,35 +399,35 @@ export default function Home() {
 
   if (showSplash) {
     return (
-      <div className="min-h-screen bg-[#041e42] flex flex-col items-center justify-center transition-opacity duration-500">
+      <div className="min-h-screen bg-[#020817] flex flex-col items-center justify-center transition-opacity duration-500">
         <img src="/logo.png" alt="AutoCaps" className="h-24 md:h-32 object-contain animate-pulse mb-6" onError={(e) => { e.currentTarget.style.display='none' }} />
-        <h1 className="text-white text-4xl font-bold tracking-tight">Auto<span className="text-[#0057ff]">Caps</span></h1>
+        <h1 className="text-white text-4xl font-bold tracking-tight">Auto<span className="text-[#6366f1]">Caps</span></h1>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg-main text-text-primary font-sans selection:bg-[#0057ff]/30">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0057ff]/15 via-bg-main to-bg-main -z-10" />
+    <div className="min-h-screen bg-bg-main text-text-primary font-sans selection:bg-[#6366f1]/30">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#6366f1]/15 via-bg-main to-bg-main -z-10" />
       
-      <header className="border-b border-border-color bg-glass-bg backdrop-blur-xl sticky top-0 z-50">
+      <header className="border-b border-white/10 bg-glass-bg backdrop-blur-2xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="AutoCaps" className="h-8 object-contain" onError={(e) => { e.currentTarget.style.display='none' }} />
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-2xl tracking-tight hidden sm:block">Auto<span className="text-[#0057ff]">Caps</span></h1>
+              <h1 className="font-bold text-2xl tracking-tight hidden sm:block">Auto<span className="text-[#6366f1]">Caps</span></h1>
             </div>
           </div>
           <div className="flex gap-4 items-center">
             <button 
               onClick={() => setAppLang(appLang === "uk" ? "en" : "uk")}
-              className="flex items-center gap-2 text-sm font-medium hover:text-[#0057ff] transition-colors"
+              className="flex items-center gap-2 text-sm font-medium hover:text-[#6366f1] transition-colors"
             >
               <Globe className="w-4 h-4" /> {appLang.toUpperCase()}
             </button>
             <button 
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-2 text-sm font-medium hover:text-[#0057ff] transition-colors"
+              className="flex items-center gap-2 text-sm font-medium hover:text-[#6366f1] transition-colors"
             >
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
@@ -440,7 +440,7 @@ export default function Home() {
             {videoId && (
               <button 
                 onClick={handleExport}
-                className="flex items-center gap-2 bg-[#0057ff] hover:bg-[#0046cc] text-white px-4 py-2 rounded-full font-medium transition-all active:scale-95 shadow-[0_0_15px_rgba(0,87,255,0.4)]"
+                className="flex items-center gap-2 bg-[#6366f1] hover:bg-[#0046cc] text-white px-4 py-2 rounded-full font-medium transition-all active:scale-95 shadow-[0_0_15px_rgba(0,87,255,0.4)]"
               >
                 <Download className="w-4 h-4" /> {t.export_video}
               </button>
@@ -463,12 +463,12 @@ export default function Home() {
         <div className="lg:col-span-8 flex flex-col gap-4 w-full h-full min-h-0 overflow-hidden">
           <div className="flex-1 flex justify-center items-center w-full bg-black/20 rounded-3xl p-2 sm:p-4 min-h-0">
             <div 
-              className={`relative bg-black rounded-2xl border border-white/10 overflow-hidden shadow-2xl group backdrop-blur-sm transition-all duration-300 ${!videoUrl ? 'aspect-video w-full max-h-full' : ''}`}
+              className={`relative bg-black rounded-2xl border border-white/5 overflow-hidden shadow-2xl group backdrop-blur-md transition-all duration-300 ${!videoUrl ? 'aspect-video w-full max-h-full' : ''}`}
               style={videoAspect ? { aspectRatio: videoAspect, maxHeight: '100%', maxWidth: '100%' } : {}}
             >
               {!videoUrl ? (
                 <label className="flex flex-col items-center justify-center h-full gap-4 cursor-pointer p-12 text-slate-400 hover:text-white transition-colors">
-                  <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#0057ff]/20 group-hover:text-[#0057ff] transition-all">
+                  <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#6366f1]/20 group-hover:text-[#6366f1] transition-all">
                     <UploadCloud className="w-8 h-8" />
                   </div>
                   <div className="text-center text-text-secondary">
@@ -498,7 +498,7 @@ export default function Home() {
                       setOverlays([]);
                       setGenerateProgress(0);
                     }}
-                    className="absolute top-4 right-4 bg-black/60 hover:bg-red-500/80 text-white p-2 rounded-full backdrop-blur-sm border border-white/10 transition-all opacity-0 group-hover:opacity-100 z-50"
+                    className="absolute top-4 right-4 bg-black/60 hover:bg-red-500/80 text-white p-2 rounded-full backdrop-blur-md border border-white/5 transition-all opacity-0 group-hover:opacity-100 z-50"
                     title={t.remove || "Delete video"}
                   >
                     <Trash2 className="w-5 h-5" />
@@ -522,7 +522,7 @@ export default function Home() {
                       onPointerLeave={() => setIsDraggingText(false)}
                     >
                     <div 
-                      className={`absolute text-center px-4 pointer-events-auto cursor-move ${isDraggingText ? 'ring-2 ring-dashed ring-[#0057ff] bg-black/20 rounded' : 'hover:ring-2 hover:ring-dashed hover:ring-white/50 rounded'}`} 
+                      className={`absolute text-center px-4 pointer-events-auto cursor-move ${isDraggingText ? 'ring-2 ring-dashed ring-[#6366f1] bg-black/20 rounded' : 'hover:ring-2 hover:ring-dashed hover:ring-white/50 rounded'}`} 
                       style={{ 
                         left: `${styles.pos_x}%`,
                         top: `${styles.pos_y}%`,
@@ -619,15 +619,15 @@ export default function Home() {
 
            {/* Editable Timeline Placeholder */}
           {videoUrl && (
-            <div className="bg-bg-card border border-border-color rounded-xl p-3 flex flex-col gap-2 overflow-hidden shadow-2xl relative shrink-0 w-full">
+            <div className="bg-bg-card border border-white/10 rounded-xl p-3 flex flex-col gap-2 overflow-hidden shadow-2xl relative shrink-0 w-full">
                {segments.length === 0 ? (
-                 <div className="text-text-secondary text-sm flex items-center gap-2 h-16 w-full justify-center border border-dashed border-border-color rounded-lg">
+                 <div className="text-text-secondary text-sm flex items-center gap-2 h-16 w-full justify-center border border-dashed border-white/10 rounded-lg">
                    {t.timeline_placeholder}
                  </div>
                ) : (
                  <div 
                    ref={timelineRef}
-                   className="relative h-40 overflow-x-auto overflow-y-hidden rounded-lg bg-black cursor-pointer custom-scrollbar border border-white/10"
+                   className="relative h-40 overflow-x-auto overflow-y-hidden rounded-lg bg-black cursor-pointer custom-scrollbar border border-white/5"
                    onClick={(e) => {
                      if (!timelineRef.current || !videoRef.current) return;
                      const rect = timelineRef.current.getBoundingClientRect();
@@ -682,7 +682,7 @@ export default function Home() {
                            return (
                              <div 
                                key={`${i}-${wIndex}`}
-                               className={`absolute top-14 bottom-4 rounded-md border flex items-center justify-center transition-all ${isActive ? 'bg-yellow-400 border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.6)] z-40 scale-105' : 'bg-yellow-400/90 border-yellow-500/50 hover:bg-yellow-400 z-30'}`}
+                               className={`absolute top-14 bottom-4 rounded-full border flex items-center justify-center transition-all overflow-hidden ${isActive ? 'bg-gradient-to-r from-amber-400 to-orange-500 border-orange-400 shadow-[0_0_15px_rgba(251,191,36,0.8)] z-40 scale-105' : 'bg-gradient-to-r from-amber-400/90 to-orange-500/90 border-orange-500/50 hover:from-amber-400 hover:to-orange-500 z-30'}`}
                                style={{ 
                                  left: `${startPct}%`, 
                                  width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`, // min width 20px
@@ -690,7 +690,7 @@ export default function Home() {
                                onClick={(e) => e.stopPropagation()} // prevent seeking on edit
                              >
                                <input 
-                                 className="bg-transparent text-black font-bold text-center w-full focus:outline-none focus:bg-white/40 rounded px-0.5 text-xs sm:text-sm selection:bg-[#0057ff]/20"
+                                 className="bg-transparent text-black font-bold text-center w-full focus:outline-none focus:bg-white/40 rounded px-0.5 text-xs sm:text-sm selection:bg-[#6366f1]/20"
                                  value={w.word}
                                  onChange={(e) => {
                                      const newSegments = [...segments];
@@ -717,31 +717,31 @@ export default function Home() {
           <div className="flex bg-black/20 border border-white/5 rounded-2xl p-1.5 gap-1 shadow-2xl backdrop-blur-3xl overflow-x-auto custom-scrollbar relative z-10">
             <button 
               onClick={() => setActiveTab('generation')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'generation' ? 'bg-gradient-to-r from-[#0057ff] to-[#00a1ff] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/10 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'generation' ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <Wand2 className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_generation}</span>
             </button>
             <button 
               onClick={() => setActiveTab('styling')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'styling' ? 'bg-gradient-to-r from-[#0057ff] to-[#00a1ff] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/10 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'styling' ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <Settings className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_styling}</span>
             </button>
             <button 
               onClick={() => setActiveTab('editor')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'editor' ? 'bg-gradient-to-r from-[#0057ff] to-[#00a1ff] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/10 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'editor' ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <Type className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_editor}</span>
             </button>
             <button 
               onClick={() => setActiveTab('overlays')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'overlays' ? 'bg-gradient-to-r from-[#0057ff] to-[#00a1ff] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/10 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'overlays' ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <UploadCloud className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_overlays}</span>
             </button>
           </div>
 
-          <div className="bg-bg-card border border-border-color rounded-2xl p-5 backdrop-blur-xl shadow-xl flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="bg-bg-card border border-white/10 rounded-2xl p-5 backdrop-blur-2xl shadow-xl flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
             {activeTab === 'generation' && (
               <div className="space-y-4 animate-in fade-in duration-300">
               <div className="grid grid-cols-2 gap-4">
@@ -750,7 +750,7 @@ export default function Home() {
                   <select 
                     value={language} 
                     onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#6366f1] transition-colors cursor-pointer appearance-none"
                   >
                     <option value="auto">{t.auto_detect}</option>
                     <option value="uk">{t.ukrainian}</option>
@@ -764,7 +764,7 @@ export default function Home() {
                   <select 
                     value={modelSize} 
                     onChange={(e) => setModelSize(e.target.value)}
-                    className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#6366f1] transition-colors cursor-pointer appearance-none"
                   >
                     <option value="small">{t.level_low}</option>
                     <option value="medium">{t.level_medium}</option>
@@ -780,24 +780,24 @@ export default function Home() {
                   value={prompt} 
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder={t.placeholder}
-                  className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0057ff] transition-colors h-20 resize-none text-sm custom-scrollbar"
+                  className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#6366f1] transition-colors h-20 resize-none text-sm custom-scrollbar"
                 />
               </div>
 
               <div className="flex flex-col gap-4 mt-2">
                 {isGenerating ? (
-                  <div className="bg-black/40 border border-[#0057ff]/30 rounded-xl p-5 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,87,255,0.15)] relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#0057ff]/10 to-transparent animate-pulse" />
+                  <div className="bg-black/40 border border-[#6366f1]/30 rounded-xl p-5 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,87,255,0.15)] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#6366f1]/10 to-transparent animate-pulse" />
                     <div className="flex justify-between items-center relative z-10">
                       <span className="text-sm font-semibold text-white flex items-center gap-2">
-                        <Wand2 className="w-4 h-4 text-[#0057ff] animate-spin-slow" /> 
+                        <Wand2 className="w-4 h-4 text-[#6366f1] animate-spin-slow" /> 
                         {t.processing}
                       </span>
-                      <span className="text-sm font-mono text-[#00a1ff]">{generateProgress}%</span>
+                      <span className="text-sm font-mono text-[#a855f7]">{generateProgress}%</span>
                     </div>
                     <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden relative z-10">
                       <div 
-                        className="bg-gradient-to-r from-[#0057ff] to-[#00a1ff] h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(0,161,255,0.8)]"
+                        className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(0,161,255,0.8)]"
                         style={{ width: `${generateProgress}%` }}
                       />
                     </div>
@@ -806,7 +806,7 @@ export default function Home() {
                   <button 
                     onClick={handleGenerate}
                     disabled={!videoId}
-                    className="w-full bg-gradient-to-r from-[#0057ff] to-[#00a1ff] hover:from-[#0046cc] hover:to-[#0081cc] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(0,87,255,0.4)] hover:shadow-[0_4px_25px_rgba(0,87,255,0.6)] hover:-translate-y-0.5 active:translate-y-0"
+                    className="w-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] hover:from-[#0046cc] hover:to-[#0081cc] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(0,87,255,0.4)] hover:shadow-[0_4px_25px_rgba(0,87,255,0.6)] hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <Wand2 className="w-5 h-5" /> {t.auto_generate}
                   </button>
@@ -823,7 +823,7 @@ export default function Home() {
                   <select 
                     value={styles.font_name}
                     onChange={(e) => setStyles({...styles, font_name: e.target.value})}
-                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
                   >
                     <option value="Arial">Arial</option>
                     <option value="Impact">Impact</option>
@@ -841,7 +841,7 @@ export default function Home() {
                       else if (val === "Middle") setStyles({...styles, position: val, pos_y: 50});
                       else if (val === "Top") setStyles({...styles, position: val, pos_y: 10});
                     }}
-                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
                   >
                     <option value="Bottom">{t.bottom}</option>
                     <option value="Middle">{t.middle}</option>
@@ -856,7 +856,7 @@ export default function Home() {
                 <select 
                   value={styles.effect}
                   onChange={(e) => setStyles({...styles, effect: e.target.value})}
-                  className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none mb-6"
+                  className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none mb-6"
                 >
                   <option value="karaoke">{t.effect_karaoke}</option>
                   <option value="highlight">{t.effect_highlight}</option>
@@ -882,7 +882,7 @@ export default function Home() {
                     type="number" min="1" max="15"
                     value={styles.words_per_line}
                     onChange={(e) => setStyles({...styles, words_per_line: parseInt(e.target.value)})}
-                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500"
                   />
                 </div>
                 <div>
@@ -891,7 +891,7 @@ export default function Home() {
                     type="number" min="1" max="5"
                     value={styles.max_lines}
                     onChange={(e) => setStyles({...styles, max_lines: parseInt(e.target.value)})}
-                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500"
                   />
                 </div>
               </div>
@@ -978,12 +978,12 @@ export default function Home() {
                 
                 <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2">
                   {segments.length === 0 ? (
-                    <div className="text-center text-text-secondary text-sm py-8 border border-dashed border-border-color rounded-lg">
+                    <div className="text-center text-text-secondary text-sm py-8 border border-dashed border-white/10 rounded-lg">
                       {t.generate_first}
                     </div>
                   ) : (
                     segments.map((seg, idx) => (
-                      <div key={seg.id || idx} className="bg-black/20 hover:bg-black/40 border border-white/5 hover:border-white/10 rounded-xl p-4 group relative transition-all duration-200">
+                      <div key={seg.id || idx} className="bg-black/20 hover:bg-black/40 border border-white/5 hover:border-white/5 rounded-xl p-4 group relative transition-all duration-200">
                         <div className="flex justify-between items-center mb-3">
                           <span className="flex items-center gap-2 bg-black/40 px-2.5 py-1 rounded-md border border-white/5">
                             <input 
@@ -994,7 +994,7 @@ export default function Home() {
                                 newSegs[idx].start = parseFloat(e.target.value) || 0;
                                 setSegments(newSegs);
                               }}
-                              className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#00a1ff] outline-none text-right font-mono" 
+                              className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#a855f7] outline-none text-right font-mono" 
                             />
                             <span className="text-xs text-white/20">⟶</span>
                             <input 
@@ -1005,7 +1005,7 @@ export default function Home() {
                                 newSegs[idx].end = parseFloat(e.target.value) || 0;
                                 setSegments(newSegs);
                               }}
-                              className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#00a1ff] outline-none text-left font-mono" 
+                              className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#a855f7] outline-none text-left font-mono" 
                             />
                           </span>
                           <button 
@@ -1043,15 +1043,15 @@ export default function Home() {
                   </h2>
                 </div>
                 {overlays.length === 0 ? (
-                  <div className="text-center text-text-secondary text-sm py-8 border border-dashed border-border-color rounded-lg">
+                  <div className="text-center text-text-secondary text-sm py-8 border border-dashed border-white/10 rounded-lg">
                     Upload B-Roll video or images using the button on the left to see them here.
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto custom-scrollbar pr-2 max-h-[500px]">
                     {overlays.map((ov, i) => (
-                      <div key={ov.id} className="bg-player-bg border border-border-color p-3 rounded-lg flex flex-col gap-3">
+                      <div key={ov.id} className="bg-player-bg border border-white/10 p-3 rounded-lg flex flex-col gap-3">
                         <div className="flex items-center gap-3">
-                          <img src={ov.url} className="w-16 h-16 rounded object-cover border border-border-color" />
+                          <img src={ov.url} className="w-16 h-16 rounded object-cover border border-white/10" />
                           <div className="flex-1 flex flex-col gap-2">
                             <div className="flex items-center justify-between gap-2">
                               <label className="text-xs text-text-secondary">{t.start}</label>
@@ -1063,7 +1063,7 @@ export default function Home() {
                                   newOvs[i].start = parseFloat(e.target.value) || 0;
                                   setOverlays(newOvs);
                                 }}
-                                className="bg-bg-card border border-border-color rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-purple-500"
+                                className="bg-bg-card border border-white/10 rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-purple-500"
                               />
                             </div>
                             <div className="flex items-center justify-between gap-2">
@@ -1076,7 +1076,7 @@ export default function Home() {
                                   newOvs[i].end = parseFloat(e.target.value) || duration;
                                   setOverlays(newOvs);
                                 }}
-                                className="bg-bg-card border border-border-color rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-purple-500"
+                                className="bg-bg-card border border-white/10 rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-purple-500"
                               />
                             </div>
                           </div>
