@@ -518,13 +518,18 @@ export default function Home() {
                       onPointerMove={(e) => {
                          if (!isDraggingText) return;
                          const rect = e.currentTarget.getBoundingClientRect();
-                         const x = ((e.clientX - rect.left) / rect.width) * 100;
+                         let x = ((e.clientX - rect.left) / rect.width) * 100;
                          const y = ((e.clientY - rect.top) / rect.height) * 100;
+                         // Magnetic snap to center
+                         if (Math.abs(x - 50) < 3) x = 50;
                          setStyles(s => ({ ...s, pos_x: Math.max(0, Math.min(100, x)), pos_y: Math.max(0, Math.min(100, y)) }));
                       }}
                       onPointerUp={() => setIsDraggingText(false)}
                       onPointerLeave={() => setIsDraggingText(false)}
                     >
+                    {isDraggingText && styles.pos_x === 50 && (
+                      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-[#6366f1] opacity-70 shadow-[0_0_10px_rgba(99,102,241,0.8)] pointer-events-none" />
+                    )}
                     <div 
                       className={`absolute text-center px-4 pointer-events-auto cursor-move ${isDraggingText ? 'ring-2 ring-dashed ring-[#6366f1] bg-black/20 rounded' : 'hover:ring-2 hover:ring-dashed hover:ring-white/50 rounded'}`} 
                       style={{ 
@@ -550,11 +555,29 @@ export default function Home() {
                         let current_screen: any[][] = [];
                         let current_line: any[] = [];
                         
+                        const MAX_CHARS_PER_LINE = 22;
+                        let line_char_count = 0;
+                        
                         for (const word of activeSegment.words) {
+                          const wordLen = word.word.length;
+                          
+                          if (current_line.length > 0 && line_char_count + wordLen > MAX_CHARS_PER_LINE) {
+                            current_screen.push(current_line);
+                            current_line = [];
+                            line_char_count = 0;
+                            if (current_screen.length >= styles.max_lines) {
+                              screens.push(current_screen);
+                              current_screen = [];
+                            }
+                          }
+                          
                           current_line.push(word);
+                          line_char_count += wordLen + 1;
+                          
                           if (current_line.length >= styles.words_per_line) {
                             current_screen.push(current_line);
                             current_line = [];
+                            line_char_count = 0;
                             if (current_screen.length >= styles.max_lines) {
                               screens.push(current_screen);
                               current_screen = [];

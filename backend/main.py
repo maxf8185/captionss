@@ -260,11 +260,28 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         current_screen = []
         current_line = []
         
+        MAX_CHARS_PER_LINE = 22
+        line_char_count = 0
+        
         for word in words:
+            word_str = word.get('word', '')
+            word_len = len(word_str)
+            
+            if len(current_line) > 0 and line_char_count + word_len > MAX_CHARS_PER_LINE:
+                current_screen.append(current_line)
+                current_line = []
+                line_char_count = 0
+                if len(current_screen) >= styles.max_lines:
+                    screens.append(current_screen)
+                    current_screen = []
+                    
             current_line.append(word)
+            line_char_count += word_len + 1
+            
             if len(current_line) >= styles.words_per_line:
                 current_screen.append(current_line)
                 current_line = []
+                line_char_count = 0
                 if len(current_screen) >= styles.max_lines:
                     screens.append(current_screen)
                     current_screen = []
