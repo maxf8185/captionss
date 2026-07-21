@@ -53,12 +53,14 @@ if os.path.exists(FRONTEND_DIR):
     app.mount("/_next", StaticFiles(directory=os.path.join(FRONTEND_DIR, "_next")), name="next_assets")
     
 model = None
+current_model_size = None
 
-def get_model():
-    global model
-    if model is None:
-        print("Loading Whisper Model...")
-        model = WhisperModel("base", device="cpu", compute_type="int8")
+def get_model(model_size="base"):
+    global model, current_model_size
+    if model is None or current_model_size != model_size:
+        print(f"Loading Whisper Model ({model_size})...")
+        model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        current_model_size = model_size
         print("Model loaded.")
     return model
 
@@ -103,6 +105,7 @@ class GenerateRequest(BaseModel):
     video_id: str
     language: str
     prompt: str = ""
+    model_size: str = "base"
 
 class StyleOptions(BaseModel):
     font_name: str = "Arial"
@@ -159,7 +162,7 @@ async def generate_subtitles(req: GenerateRequest):
     if not video_path:
         raise HTTPException(status_code=404, detail="Video not found")
         
-    whisper_model = get_model()
+    whisper_model = get_model(req.model_size)
     ffmpeg_exe = get_ffmpeg_path()
     
     audio_path = os.path.join(UPLOAD_DIR, f"{req.video_id}.wav")
@@ -169,7 +172,10 @@ async def generate_subtitles(req: GenerateRequest):
     lang = req.language if req.language != 'auto' else None
     initial_prompt = req.prompt if req.prompt and len(req.prompt.strip()) > 0 else None
     
-    segments, info = whisper_model.transcribe(audio_path, language=lang, word_timestamps=True, initial_prompt=initial_prompt)
+    if lang == 'uk' and not initial_prompt:
+        initial_prompt = "Привіт! Це текст українською мовою, з правильною граматикою та пунктуацією."
+        
+    segments, info = whisper_model.transcribe(audio_path, language=lang, word_timestamps=True, initial_prompt=initial_prompt, beam_size=5)
     
     result_segments = []
     seg_id = 1

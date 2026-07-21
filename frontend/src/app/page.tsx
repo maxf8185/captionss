@@ -9,6 +9,7 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [segments, setSegments] = useState<any[]>([]);
   const [language, setLanguage] = useState("auto");
+  const [modelSize, setModelSize] = useState("small"); // Upgrade default to small for better quality
   const [prompt, setPrompt] = useState("");
   type Overlay = {
     id: string;
@@ -139,7 +140,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ video_id: videoId, language, prompt }),
+        body: JSON.stringify({ video_id: videoId, language, prompt, model_size: modelSize }),
       });
       if (!res.ok) throw new Error("Generation failed");
       const data = await res.json();
@@ -533,19 +534,33 @@ export default function Home() {
             </h2>
             
             <div className="space-y-4">
-              <div>
-                <label className="text-sm text-slate-400 mb-2 block">Source Language</label>
-                <select 
-                  value={language} 
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
-                >
-                  <option value="auto">Auto Detect</option>
-                  <option value="uk">Ukrainian</option>
-                  <option value="en">English</option>
-                  <option value="ru">Russian</option>
-                  <option value="sk">Slovak</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-slate-400 mb-2 block">Source Language</label>
+                  <select 
+                    value={language} 
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
+                  >
+                    <option value="auto">Auto Detect</option>
+                    <option value="uk">Ukrainian</option>
+                    <option value="en">English</option>
+                    <option value="ru">Russian</option>
+                    <option value="sk">Slovak</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-slate-400 mb-2 block">AI Model Size</label>
+                  <select 
+                    value={modelSize} 
+                    onChange={(e) => setModelSize(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[#0057ff] transition-colors cursor-pointer appearance-none"
+                  >
+                    <option value="base">Base (Fast, Less Accurate)</option>
+                    <option value="small">Small (Balanced)</option>
+                    <option value="medium">Medium (Slow, Accurate)</option>
+                  </select>
+                </div>
               </div>
 
               <div>
