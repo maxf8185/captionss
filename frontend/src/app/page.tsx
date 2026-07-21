@@ -36,7 +36,7 @@ export default function Home() {
   
   const [styles, setStyles] = useState({
     font_name: "Arial",
-    font_size: 7, // Percentage of video height
+    font_size: 10, // Percentage of video height
     primary_color: "#FFFFFF",
     highlight_color: "#0ea5e9", // sky-500
     outline_color: "#000000",
@@ -283,45 +283,44 @@ export default function Home() {
         )}
 
         {/* Left Column: Player */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className={`relative bg-black/40 rounded-2xl border border-white/10 overflow-hidden shadow-2xl flex items-center justify-center group backdrop-blur-sm ${!videoUrl ? 'aspect-video' : 'max-h-[70vh] min-h-[40vh]'}`}>
-            {!videoUrl ? (
-              <label className="flex flex-col items-center gap-4 cursor-pointer p-12 text-slate-400 hover:text-white transition-colors">
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#0057ff]/20 group-hover:text-[#0057ff] transition-all">
-                  <UploadCloud className="w-8 h-8" />
-                </div>
-                <div className="text-center">
-                  <p className="font-medium text-lg">Click to upload video</p>
-                  <p className="text-sm opacity-60">MP4, MOV, WebM</p>
-                </div>
-                <input type="file" className="hidden" accept="video/*" onChange={handleUpload} />
-              </label>
-            ) : (
-              <>
-                <video 
-                  ref={videoRef}
-                  src={videoUrl} 
-                  className="w-full h-full object-contain max-h-[70vh]"
-                  controls
-                />
-                
-                {/* Custom Subtitle Overlay */}
-                {activeSegment && videoAspect && (
-                  <div 
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex"
-                    style={{
-                      aspectRatio: videoAspect,
-                      maxHeight: "100%",
-                      maxWidth: "100%",
-                      width: videoAspect > 1 ? "100%" : "auto",
-                      height: videoAspect > 1 ? "auto" : "100%",
-                      alignItems: styles.position === "Top" ? "flex-start" : styles.position === "Middle" ? "center" : "flex-end",
-                      justifyContent: "center",
-                      paddingTop: styles.position === "Top" ? "10%" : "0",
-                      paddingBottom: styles.position === "Bottom" ? "10%" : "0",
-                      containerType: "size", // Makes cqh relative to this container (which matches the video)
-                    }}
-                  >
+        <div className="lg:col-span-8 flex flex-col gap-6 items-center w-full">
+          <div className="flex justify-center w-full bg-black/20 rounded-3xl p-2 sm:p-4">
+            <div 
+              className={`relative bg-black rounded-2xl border border-white/10 overflow-hidden shadow-2xl group backdrop-blur-sm transition-all duration-300 ${!videoUrl ? 'aspect-video w-full' : ''}`}
+              style={videoAspect ? { aspectRatio: videoAspect, maxHeight: '70vh', maxWidth: '100%' } : {}}
+            >
+              {!videoUrl ? (
+                <label className="flex flex-col items-center justify-center h-full gap-4 cursor-pointer p-12 text-slate-400 hover:text-white transition-colors">
+                  <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#0057ff]/20 group-hover:text-[#0057ff] transition-all">
+                    <UploadCloud className="w-8 h-8" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-medium text-lg">Click to upload video</p>
+                    <p className="text-sm opacity-60">MP4, MOV, WebM</p>
+                  </div>
+                  <input type="file" className="hidden" accept="video/*" onChange={handleUpload} />
+                </label>
+              ) : (
+                <>
+                  <video 
+                    ref={videoRef}
+                    src={videoUrl} 
+                    className="w-full h-full object-contain"
+                    controls
+                  />
+                  
+                  {/* Custom Subtitle Overlay */}
+                  {activeSegment && videoAspect && (
+                    <div 
+                      className="absolute inset-0 pointer-events-none flex"
+                      style={{
+                        alignItems: styles.position === "Top" ? "flex-start" : styles.position === "Middle" ? "center" : "flex-end",
+                        justifyContent: "center",
+                        paddingTop: styles.position === "Top" ? "10%" : "0",
+                        paddingBottom: styles.position === "Bottom" ? "10%" : "0",
+                        containerType: "size", // Makes cqh relative to this container (which exactly matches the video)
+                      }}
+                    >
                     <div 
                       className="text-center w-full px-4" 
                       style={{ 
@@ -585,6 +584,7 @@ export default function Home() {
                     <option value="base">Base (Fast, Less Accurate)</option>
                     <option value="small">Small (Balanced)</option>
                     <option value="medium">Medium (Slow, Accurate)</option>
+                    <option value="large-v3">Large V3 (Best Quality)</option>
                   </select>
                 </div>
               </div>
@@ -666,7 +666,7 @@ export default function Home() {
                 <label className="text-sm text-slate-400 mb-2 block">Font Size ({styles.font_size}%)</label>
                 <input 
                   type="range" 
-                  min="1" max="20" step="0.5"
+                  min="1" max="40" step="0.5"
                   value={styles.font_size}
                   onChange={(e) => setStyles({...styles, font_size: parseFloat(e.target.value)})}
                   className="w-full accent-cyan-500 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
