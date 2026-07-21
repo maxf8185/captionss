@@ -45,7 +45,7 @@ jobs:
     - name: Build Executable with PyInstaller
       run: |
         cd backend
-        pyinstaller --noconfirm --onedir --windowed --icon=logo.ico --add-data "../frontend/out;frontend/out" --collect-all faster_whisper --collect-all ctranslate2 --collect-all imageio_ffmpeg --name "AutoCaps" desktop.py
+        pyinstaller --noconfirm --onedir --windowed --icon=logo.ico --add-data "../frontend/out;frontend/out" --collect-all faster_whisper --collect-all ctranslate2 --collect-all imageio_ffmpeg --collect-all uvicorn --collect-all fastapi --name "AutoCaps" desktop.py
         
     - name: Build Installer with Inno Setup
       run: |

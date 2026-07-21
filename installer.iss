@@ -16,8 +16,8 @@ SetupIconFile=backend\logo.ico
 Source: "backend\dist\AutoCaps\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\AutoCaps"; Filename: "{app}\AutoCaps.exe"
-Name: "{autodesktop}\AutoCaps"; Filename: "{app}\AutoCaps.exe"; Tasks: desktopicon
+Name: "{group}\AutoCaps"; Filename: "{app}\AutoCaps.exe"; IconFilename: "{app}\AutoCaps.exe"
+Name: "{autodesktop}\AutoCaps"; Filename: "{app}\AutoCaps.exe"; IconFilename: "{app}\AutoCaps.exe"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked

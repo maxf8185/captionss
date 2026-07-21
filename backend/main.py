@@ -113,11 +113,18 @@ class StyleOptions(BaseModel):
     words_per_line: int = 5
     max_lines: int = 2
 
+class OverlayConfig(BaseModel):
+    id: str
+    start: float
+    end: float
+    url: str
+
 class ExportRequest(BaseModel):
     video_id: str
     segments: List[SubtitleSegment]
     styles: StyleOptions
     save_path: Optional[str] = None
+    overlays: List[OverlayConfig] = []
 
 @app.post("/api/upload")
 async def upload_video(file: UploadFile = File(...)):
@@ -129,6 +136,17 @@ async def upload_video(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
         
     return {"video_id": video_id, "filename": file.filename, "url": f"/api/static_uploads/{video_id}.{ext}"}
+
+@app.post("/api/upload_overlay")
+async def upload_overlay(file: UploadFile = File(...)):
+    overlay_id = str(uuid.uuid4())
+    ext = file.filename.split(".")[-1]
+    file_path = os.path.join(UPLOAD_DIR, f"overlay_{overlay_id}.{ext}")
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {"overlay_id": f"overlay_{overlay_id}", "url": f"/api/static_uploads/overlay_{overlay_id}.{ext}"}
 
 @app.post("/api/generate")
 async def generate_subtitles(req: GenerateRequest):
@@ -278,17 +296,40 @@ async def export_video(req: ExportRequest):
     abs_ass_path = os.path.abspath(ass_path).replace("\\", "/")
     abs_ass_path = abs_ass_path.replace(":", "\\:")
     
+    inputs = ["-i", video_path]
+    filter_chains = []
+    last_v = "0:v"
+    
+    for i, ov in enumerate(req.overlays):
+        overlay_path = None
+        for file in os.listdir(UPLOAD_DIR):
+            if file.startswith(ov.id):
+                overlay_path = os.path.join(UPLOAD_DIR, file)
+                break
+        if overlay_path:
+            inputs.extend(["-i", overlay_path])
+            idx = len(inputs) // 2 - 1
+            # Scale overlay maintaining aspect ratio to max 80% width/height of video
+            # and overlay it centered between start and end times
+            filter_chains.append(f"[{idx}:v]scale='min(iw, {video_width}*0.8)':'min(ih, {video_height}*0.8)':force_original_aspect_ratio=decrease[ol{i}]")
+            filter_chains.append(f"[{last_v}][ol{i}]overlay=x=(W-w)/2:y=(H-h)/2:enable='between(t,{ov.start},{ov.end})'[v{i+1}]")
+            last_v = f"v{i+1}"
+            
+    filter_chains.append(f"[{last_v}]ass='{abs_ass_path}'[outv]")
+    filter_complex = ";".join(filter_chains)
+    
+    cmd = [ffmpeg_exe, "-y"] + inputs + [
+        "-filter_complex", filter_complex,
+        "-map", "[outv]", "-map", "0:a?",
+        "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+        "-c:a", "copy",
+        out_video_path
+    ]
+    
     creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
     
     try:
-        subprocess.run([
-            ffmpeg_exe, "-y", 
-            "-i", video_path, 
-            "-vf", f"ass='{abs_ass_path}'", 
-            "-c:v", "libx264", "-crf", "18", "-preset", "fast",
-            "-c:a", "copy",
-            out_video_path
-        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags)
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags)
     except subprocess.CalledProcessError:
         raise HTTPException(status_code=500, detail="Error exporting video. Make sure ffmpeg is installed.")
         

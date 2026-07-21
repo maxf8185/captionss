@@ -10,10 +10,18 @@ export default function Home() {
   const [segments, setSegments] = useState<any[]>([]);
   const [language, setLanguage] = useState("auto");
   const [prompt, setPrompt] = useState("");
+  type Overlay = {
+    id: string;
+    url: string;
+    start: number;
+    end: number;
+  };
+  
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
+  const [overlays, setOverlays] = useState<Overlay[]>([]);
   
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1500);
@@ -136,6 +144,30 @@ export default function Home() {
     }
     setIsGenerating(false);
   };
+  
+  const handleUploadOverlay = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/upload_overlay", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setOverlays([...overlays, {
+        id: data.overlay_id,
+        url: data.url,
+        start: currentTime,
+        end: Math.min(currentTime + 3, duration)
+      }]);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Failed to upload overlay.");
+    }
+  };
 
   const handleExport = async () => {
     if (!videoId) return;
@@ -161,7 +193,8 @@ export default function Home() {
           video_id: videoId,
           segments,
           styles,
-          save_path: savePath
+          save_path: savePath,
+          overlays
         })
       });
       const data = await res.json();
@@ -211,7 +244,13 @@ export default function Home() {
               <h1 className="font-bold text-2xl tracking-tight hidden sm:block">Auto<span className="text-[#0057ff]">Caps</span></h1>
             </div>
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-center">
+            {videoUrl && (
+              <label className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-medium transition-all cursor-pointer shadow-[0_0_15px_rgba(147,51,234,0.4)]">
+                <UploadCloud className="w-4 h-4" /> Add B-Roll
+                <input type="file" className="hidden" accept="image/*,video/*" onChange={handleUploadOverlay} />
+              </label>
+            )}
             {videoId && (
               <button 
                 onClick={handleExport}
@@ -307,7 +346,7 @@ export default function Home() {
                ) : (
                  <div 
                    ref={timelineRef}
-                   className="relative h-28 overflow-x-auto overflow-y-hidden rounded-lg bg-black cursor-pointer custom-scrollbar border border-white/10"
+                   className="relative h-40 overflow-x-auto overflow-y-hidden rounded-lg bg-black cursor-pointer custom-scrollbar border border-white/10"
                    onClick={(e) => {
                      if (!timelineRef.current || !videoRef.current) return;
                      const rect = timelineRef.current.getBoundingClientRect();
@@ -332,7 +371,27 @@ export default function Home() {
                        <div className="absolute -top-1 -left-1.5 w-3.5 h-3.5 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,1)]"></div>
                      </div>
 
-                     {/* Words Blocks */}
+                     {/* Overlay Blocks (Top Track) */}
+                     {overlays.map((ov) => {
+                       const startPct = (ov.start / duration) * 100;
+                       const widthPct = ((ov.end - ov.start) / duration) * 100;
+                       const isActive = currentTime >= ov.start && currentTime <= ov.end;
+                       return (
+                         <div
+                           key={ov.id}
+                           className={`absolute top-2 h-10 rounded border flex items-center px-1 overflow-hidden transition-all ${isActive ? 'bg-purple-600 border-purple-400 z-40' : 'bg-purple-900/80 border-purple-500/50 z-30'}`}
+                           style={{ 
+                             left: `${startPct}%`, 
+                             width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`,
+                           }}
+                           onClick={(e) => e.stopPropagation()}
+                         >
+                           <img src={ov.url} className="h-full w-full object-cover opacity-80 pointer-events-none" />
+                         </div>
+                       );
+                     })}
+
+                     {/* Words Blocks (Bottom Track) */}
                      {segments.map((s, i) => (
                         s.words.map((w: any, wIndex: number) => {
                            const startPct = (w.start / duration) * 100;
@@ -342,7 +401,7 @@ export default function Home() {
                            return (
                              <div 
                                key={`${i}-${wIndex}`}
-                               className={`absolute top-4 bottom-4 rounded-md border flex items-center justify-center transition-all ${isActive ? 'bg-yellow-400 border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.6)] z-40 scale-105' : 'bg-yellow-400/90 border-yellow-500/50 hover:bg-yellow-400 z-30'}`}
+                               className={`absolute top-14 bottom-4 rounded-md border flex items-center justify-center transition-all ${isActive ? 'bg-yellow-400 border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.6)] z-40 scale-105' : 'bg-yellow-400/90 border-yellow-500/50 hover:bg-yellow-400 z-30'}`}
                                style={{ 
                                  left: `${startPct}%`, 
                                  width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`, // min width 20px
@@ -365,6 +424,58 @@ export default function Home() {
                    </div>
                  </div>
                )}
+            </div>
+          )}
+
+          {/* Overlays Editor */}
+          {overlays.length > 0 && (
+            <div className="bg-black/40 border border-purple-500/30 rounded-xl p-4 flex flex-col gap-3 shadow-2xl mt-2">
+              <h3 className="text-sm font-semibold text-purple-300 flex items-center gap-2">
+                <UploadCloud className="w-4 h-4" /> B-Roll Elements
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                {overlays.map((ov, i) => (
+                  <div key={ov.id} className="bg-white/5 border border-white/10 p-3 rounded-lg flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <img src={ov.url} className="w-12 h-12 rounded object-cover border border-white/20" />
+                      <div className="flex-1 flex flex-col gap-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-xs text-slate-400">Start (s)</label>
+                          <input 
+                            type="number" step="0.1" min="0" max={duration}
+                            value={ov.start.toFixed(1)}
+                            onChange={(e) => {
+                              const newOvs = [...overlays];
+                              newOvs[i].start = parseFloat(e.target.value) || 0;
+                              setOverlays(newOvs);
+                            }}
+                            className="bg-black border border-white/20 rounded px-2 py-1 text-xs w-16 text-center text-white"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-xs text-slate-400">End (s)</label>
+                          <input 
+                            type="number" step="0.1" min="0" max={duration}
+                            value={ov.end.toFixed(1)}
+                            onChange={(e) => {
+                              const newOvs = [...overlays];
+                              newOvs[i].end = parseFloat(e.target.value) || duration;
+                              setOverlays(newOvs);
+                            }}
+                            className="bg-black border border-white/20 rounded px-2 py-1 text-xs w-16 text-center text-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setOverlays(overlays.filter(o => o.id !== ov.id))}
+                      className="w-full bg-red-500/20 hover:bg-red-500/40 text-red-300 text-xs py-1.5 rounded transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
