@@ -134,6 +134,7 @@ class GenerateRequest(BaseModel):
     language: str
     prompt: str = ""
     model_size: str = "base"
+    task: str = "transcribe"
 
 class StyleOptions(BaseModel):
     font_name: str = "Arial"
@@ -147,6 +148,8 @@ class StyleOptions(BaseModel):
     effect: str = "karaoke"
     words_per_line: int = 5
     max_lines: int = 2
+    aspect_ratio: str = "original"
+    animation_style: str = "smooth"
 
 class OverlayConfig(BaseModel):
     id: str
@@ -183,6 +186,23 @@ async def upload_overlay(file: UploadFile = File(...)):
         
     return {"overlay_id": f"overlay_{overlay_id}", "url": f"/api/static_uploads/overlay_{overlay_id}.{ext}"}
 
+@app.post("/api/upload_font")
+async def upload_font(file: UploadFile = File(...)):
+    font_id = str(uuid.uuid4())
+    ext = file.filename.split(".")[-1]
+    font_filename = f"font_{font_id}.{ext}"
+    file_path = os.path.join(UPLOAD_DIR, font_filename)
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    # Register font so FFmpeg can use it without system installation?
+    # FFmpeg can use fonts via a directory if we set fonts_dir or just pass fontconfig,
+    # but the easiest way is to let the user know the font_name and we'll point ASS to it.
+    font_name = file.filename.rsplit(".", 1)[0]
+    
+    return {"font_name": font_name, "url": f"/api/static_uploads/{font_filename}"}
+
 @app.post("/api/generate")
 async def generate_subtitles(req: GenerateRequest):
     video_path = None
@@ -207,7 +227,7 @@ async def generate_subtitles(req: GenerateRequest):
     if lang == 'uk' and not initial_prompt:
         initial_prompt = "Привіт! Це текст українською мовою, з правильною граматикою та пунктуацією."
         
-    segments_generator, info = whisper_model.transcribe(audio_path, language=lang, word_timestamps=True, initial_prompt=initial_prompt, beam_size=5)
+    segments_generator, info = whisper_model.transcribe(audio_path, language=lang, task=req.task, word_timestamps=True, initial_prompt=initial_prompt, beam_size=5)
     
     async def event_generator():
         result_segments = []
@@ -326,7 +346,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         for screen in screens:
             if not screen or not screen[0]: continue
             
-            if styles.effect == "karaoke":
+            if styles.effect == "legacy_karaoke":
                 start_time = format_time(screen[0][0]['start'])
                 end_time = format_time(screen[-1][-1]['end'])
                 text_karaoke = ""
@@ -348,7 +368,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                         line_str = ""
                         for w in line:
                             if w == active_w:
-                                line_str += f"{{\\c{highlight}}}{w['word']}{{\\c{primary}}} "
+                                if styles.animation_style == "smooth":
+                                    line_str += f"{{\\c{highlight}\\t(0,100,\\fscx115\\fscy115)}}{w['word']}{{\\fscx100\\fscy100\\c{primary}}} "
+                                else:
+                                    line_str += f"{{\\c{highlight}\\fscx115\\fscy115}}{w['word']}{{\\fscx100\\fscy100\\c{primary}}} "
                             elif styles.effect == "reveal" and w['start'] > active_w['start']:
                                 line_str += f"{{\\alpha&HFF&}}{w['word']}{{\\alpha}} "
                             else:
@@ -373,6 +396,19 @@ async def export_video(req: ExportRequest):
         
     ffmpeg_exe = get_ffmpeg_path()
     video_width, video_height = get_video_dimensions(video_path, ffmpeg_exe)
+    
+    crop_filter = ""
+    if req.styles.aspect_ratio == "9:16":
+        target_width = int(video_height * 9 / 16)
+        # Ensure we don't scale up width
+        if target_width > video_width:
+            target_width = video_width
+            target_height = int(video_width * 16 / 9)
+            crop_filter = f"crop={target_width}:{target_height}"
+            video_height = target_height
+        else:
+            crop_filter = f"crop={target_width}:{video_height}"
+            video_width = target_width
         
     ass_path = os.path.join(OUTPUT_DIR, f"{req.video_id}.ass")
     generate_ass_file([s.dict() for s in req.segments], req.styles, ass_path, video_width, video_height)
@@ -400,8 +436,21 @@ async def export_video(req: ExportRequest):
             filter_chains.append(f"[{idx}:v]scale='min(iw, {video_width}*0.8)':'min(ih, {video_height}*0.8)':force_original_aspect_ratio=decrease[ol{i}]")
             filter_chains.append(f"[{last_v}][ol{i}]overlay=x=(W-w)/2:y=(H-h)/2:enable='between(t,{ov.start},{ov.end})'[v{i+1}]")
             last_v = f"v{i+1}"
+    
+    # Fonts dir config for custom fonts
+    # ASS filter uses fontconfig or fontsdir. We can supply fontsdir to FFmpeg ASS filter.
+    abs_fonts_dir = os.path.abspath(UPLOAD_DIR).replace("\\", "/")
+    abs_fonts_dir = abs_fonts_dir.replace(":", "\\:")
+    
+    if crop_filter:
+        filter_chains.insert(0, f"[0:v]{crop_filter}[v_crop]")
+        # Replace 0:v with v_crop in overlays
+        if not req.overlays:
+            last_v = "v_crop"
+        else:
+            filter_chains[1] = filter_chains[1].replace("[0:v]", "[v_crop]")
             
-    filter_chains.append(f"[{last_v}]ass='{abs_ass_path}',format=yuv420p,pad=ceil(iw/2)*2:ceil(ih/2)*2[outv]")
+    filter_chains.append(f"[{last_v}]ass='{abs_ass_path}':fontsdir='{abs_fonts_dir}',format=yuv420p,pad=ceil(iw/2)*2:ceil(ih/2)*2[outv]")
     filter_complex = ";".join(filter_chains)
     
     cmd = [ffmpeg_exe, "-y"] + inputs + [

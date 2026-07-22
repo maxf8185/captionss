@@ -11,6 +11,7 @@ export default function Home() {
   const [segments, setSegments] = useState<any[]>([]);
   const [language, setLanguage] = useState("auto");
   const [modelSize, setModelSize] = useState("large"); // default to large for better accuracy
+  const [aiTask, setAiTask] = useState("transcribe"); // transcribe or translate
 
   const [appLang, setAppLang] = useState<Language>("uk");
   const t = translations[appLang];
@@ -34,6 +35,8 @@ export default function Home() {
   const [videoAspect, setVideoAspect] = useState<number | null>(null);
   const [isDraggingText, setIsDraggingText] = useState(false);
   
+  const [customFonts, setCustomFonts] = useState<string[]>([]);
+
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1500);
     return () => clearTimeout(timer);
@@ -63,7 +66,19 @@ export default function Home() {
     effect: "karaoke", // karaoke, highlight, reveal
     words_per_line: 3,
     max_lines: 1,
+    aspect_ratio: "original", // original, 9:16
+    animation_style: "smooth", // smooth, instant
   });
+
+  const applyPreset = (preset: string) => {
+    if (preset === "hormozi") {
+      setStyles({...styles, font_name: "Impact", font_size: 10, effect: "highlight", words_per_line: 1, max_lines: 1, primary_color: "#FFFFFF", highlight_color: "#FFEA00", outline_color: "#000000"});
+    } else if (preset === "karaoke") {
+      setStyles({...styles, font_name: "Arial", font_size: 7, effect: "karaoke", words_per_line: 5, max_lines: 2, primary_color: "#FFFFFF", highlight_color: "#0ea5e9", outline_color: "#000000"});
+    } else if (preset === "minimalist") {
+      setStyles({...styles, font_name: "Verdana", font_size: 5, effect: "reveal", words_per_line: 6, max_lines: 1, primary_color: "#FFFFFF", highlight_color: "#FFFFFF", outline_color: "#000000"});
+    }
+  };
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -162,7 +177,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ video_id: videoId, language, prompt, model_size: modelSize }),
+        body: JSON.stringify({ video_id: videoId, language, prompt, model_size: modelSize, task: aiTask }),
       });
       if (!res.ok) throw new Error("Generation failed");
       if (!res.body) throw new Error("No response body");
@@ -223,6 +238,32 @@ export default function Home() {
       setErrorMsg("Failed to upload overlay.");
     }
   };
+
+  const handleUploadFont = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/upload_font", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setCustomFonts([...customFonts, data.font_name]);
+      setStyles({...styles, font_name: data.font_name});
+      
+      // Load the font in the browser so it renders in the preview
+      const newFont = new FontFace(data.font_name, `url(${data.url})`);
+      const loadedFace = await newFont.load();
+      document.fonts.add(loadedFace);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Failed to upload font.");
+    }
+  };
+
   const parseSRT = (content: string) => {
     const lines = content.replace(/\r/g, '').split('\n');
     const newSegments: any[] = [];
@@ -604,19 +645,28 @@ export default function Home() {
                         return activeScreen.map((line, lineIndex) => (
                           <div key={lineIndex}>
                             {line.map((w: any, wIndex: number) => {
-                              const isActive = currentTime >= w.start && currentTime <= w.end;
-                              const isPast = currentTime > w.end;
+                              let next_start = w.end;
+                              if (wIndex + 1 < line.length) {
+                                next_start = line[wIndex + 1].start;
+                              } else if (lineIndex + 1 < activeScreen.length && activeScreen[lineIndex + 1].length > 0) {
+                                next_start = activeScreen[lineIndex + 1][0].start;
+                              }
+                              // Also fallback to the segment end if it's the last word?
+                              // But w.end is fine for the very last word.
+
+                              const isActive = currentTime >= w.start && currentTime < next_start;
+                              const isPast = currentTime >= next_start;
                               
                               let color = styles.primary_color;
                               let opacity = 1;
                               
                               if (styles.effect === "karaoke") {
-                                color = isActive || isPast ? styles.primary_color : styles.highlight_color;
+                                color = isActive ? styles.highlight_color : styles.primary_color;
                               } else if (styles.effect === "highlight") {
                                 color = isActive ? styles.highlight_color : styles.primary_color;
                               } else if (styles.effect === "reveal") {
                                 color = isActive ? styles.highlight_color : styles.primary_color;
-                                opacity = isActive || isPast ? 1 : 0;
+                                opacity = (isActive || isPast) ? 1 : 0;
                               }
 
                               return (
@@ -625,7 +675,9 @@ export default function Home() {
                                   style={{ 
                                     color: color,
                                     opacity: opacity,
-                                    transition: "color 0.15s ease, opacity 0.1s ease"
+                                    transform: isActive ? "scale(1.15)" : "scale(1)",
+                                    transformOrigin: "center bottom",
+                                    transition: "color 0.15s ease, opacity 0.1s ease, transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1)"
                                   }}
                                   className="inline-block mx-[0.1em] font-bold break-words"
                                 >
@@ -805,6 +857,19 @@ export default function Home() {
                 </div>
               </div>
 
+              <div className="flex items-center gap-3 bg-black/20 p-3 rounded-lg border border-white/5">
+                <input 
+                  type="checkbox" 
+                  id="translate_opt"
+                  checked={aiTask === "translate"}
+                  onChange={(e) => setAiTask(e.target.checked ? "translate" : "transcribe")}
+                  className="w-4 h-4 rounded bg-player-bg border-white/10 text-[#6366f1] focus:ring-[#6366f1] focus:ring-offset-gray-900 cursor-pointer"
+                />
+                <label htmlFor="translate_opt" className="text-sm text-text-primary cursor-pointer flex-1">
+                  Translate to English (Auto-Translation)
+                </label>
+              </div>
+
               <div>
                 <label className="text-sm text-text-secondary mb-2 flex items-center gap-2">
                   {t.vocab_context}
@@ -850,19 +915,37 @@ export default function Home() {
             
             {activeTab === 'styling' && (
               <div className="space-y-6 animate-in fade-in duration-300">
+              
+              {/* Presets */}
+              <div className="bg-black/20 border border-white/5 p-4 rounded-xl">
+                <label className="text-sm font-semibold text-text-primary mb-3 block flex items-center gap-2"><Wand2 className="w-4 h-4 text-[#6366f1]" /> AI Style Presets</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => applyPreset('hormozi')} className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 hover:from-yellow-500/30 hover:to-orange-500/30 border border-yellow-500/30 rounded-lg p-2 text-xs font-bold text-yellow-500 transition-all">Hormozi (1 Word)</button>
+                  <button onClick={() => applyPreset('karaoke')} className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 border border-blue-500/30 rounded-lg p-2 text-xs font-bold text-cyan-400 transition-all">Karaoke Pop</button>
+                  <button onClick={() => applyPreset('minimalist')} className="bg-gradient-to-br from-gray-500/20 to-gray-400/20 hover:from-gray-500/30 hover:to-gray-400/30 border border-gray-500/30 rounded-lg p-2 text-xs font-bold text-gray-300 transition-all">Minimalist</button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-text-secondary mb-2 flex items-center gap-2"><Type className="w-4 h-4"/> {t.font}</label>
-                  <select 
-                    value={styles.font_name}
-                    onChange={(e) => setStyles({...styles, font_name: e.target.value})}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
-                  >
-                    <option value="Arial">Arial</option>
-                    <option value="Impact">Impact</option>
-                    <option value="Verdana">Verdana</option>
-                    <option value="Comic Sans MS">Comic Sans</option>
-                  </select>
+                  <div className="flex gap-2">
+                    <select 
+                      value={styles.font_name}
+                      onChange={(e) => setStyles({...styles, font_name: e.target.value})}
+                      className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
+                    >
+                      <option value="Arial">Arial</option>
+                      <option value="Impact">Impact</option>
+                      <option value="Verdana">Verdana</option>
+                      <option value="Comic Sans MS">Comic Sans</option>
+                      {customFonts.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <label className="bg-[#6366f1] hover:bg-[#0046cc] text-white px-3 py-2.5 rounded-lg cursor-pointer transition-colors flex items-center justify-center shrink-0" title="Upload Custom Font">
+                      <span className="font-bold">+</span>
+                      <input type="file" className="hidden" accept=".ttf,.otf" onChange={handleUploadFont} />
+                    </label>
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm text-text-secondary mb-2 flex items-center gap-2"><AlignCenter className="w-4 h-4"/> {t.position}</label>
@@ -874,7 +957,7 @@ export default function Home() {
                       else if (val === "Middle") setStyles({...styles, position: val, pos_y: 50});
                       else if (val === "Top") setStyles({...styles, position: val, pos_y: 10});
                     }}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
                   >
                     <option value="Bottom">{t.bottom}</option>
                     <option value="Middle">{t.middle}</option>
@@ -884,17 +967,41 @@ export default function Home() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm text-text-secondary mb-2 block">{t.anim_effect}</label>
-                <select 
-                  value={styles.effect}
-                  onChange={(e) => setStyles({...styles, effect: e.target.value})}
-                  className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500 cursor-pointer appearance-none mb-6"
-                >
-                  <option value="karaoke">{t.effect_karaoke}</option>
-                  <option value="highlight">{t.effect_highlight}</option>
-                  <option value="reveal">{t.effect_reveal}</option>
-                </select>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm text-text-secondary mb-2 block">{t.anim_effect}</label>
+                  <select 
+                    value={styles.effect}
+                    onChange={(e) => setStyles({...styles, effect: e.target.value})}
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
+                  >
+                    <option value="karaoke">{t.effect_karaoke}</option>
+                    <option value="highlight">{t.effect_highlight}</option>
+                    <option value="reveal">{t.effect_reveal}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-2 block">Animation Style</label>
+                  <select 
+                    value={styles.animation_style}
+                    onChange={(e) => setStyles({...styles, animation_style: e.target.value})}
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
+                  >
+                    <option value="smooth">Smooth (Pop-up)</option>
+                    <option value="instant">Instant (Classic)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-text-secondary mb-2 block">Aspect Ratio</label>
+                  <select 
+                    value={styles.aspect_ratio}
+                    onChange={(e) => setStyles({...styles, aspect_ratio: e.target.value})}
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
+                  >
+                    <option value="original">Original</option>
+                    <option value="9:16">9:16 (TikTok)</option>
+                  </select>
+                </div>
               </div>
 
               <div>
