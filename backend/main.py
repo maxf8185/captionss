@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from faster_whisper import WhisperModel
 import asyncio
 import sys
+import time
 from typing import List, Optional
 from pydantic import BaseModel
 import imageio_ffmpeg
@@ -48,6 +49,28 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 app.mount("/api/static_uploads", StaticFiles(directory=UPLOAD_DIR), name="static_uploads")
 app.mount("/api/static_outputs", StaticFiles(directory=OUTPUT_DIR), name="static_outputs")
 
+async def cleanup_old_files():
+    while True:
+        try:
+            now = time.time()
+            cutoff = now - 24 * 3600 # 24 hours
+            for directory in [UPLOAD_DIR, OUTPUT_DIR]:
+                if not os.path.exists(directory): continue
+                for filename in os.listdir(directory):
+                    filepath = os.path.join(directory, filename)
+                    if os.path.isfile(filepath):
+                        if os.path.getmtime(filepath) < cutoff:
+                            os.remove(filepath)
+                            print(f"Cleaned up old file: {filename}")
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+        
+        await asyncio.sleep(3600) # Check every hour
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(cleanup_old_files())
+
 # Mount Next.js frontend
 if os.path.exists(FRONTEND_DIR):
     app.mount("/_next", StaticFiles(directory=os.path.join(FRONTEND_DIR, "_next")), name="next_assets")
@@ -59,9 +82,14 @@ def get_model(model_size="base"):
     global model, current_model_size
     if model is None or current_model_size != model_size:
         print(f"Loading Whisper Model ({model_size})...")
-        model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        try:
+            model = WhisperModel(model_size, device="cuda", compute_type="float16")
+            print("Model loaded with CUDA acceleration.")
+        except Exception as e:
+            print(f"CUDA failed or not available ({e}). Falling back to CPU.")
+            model = WhisperModel(model_size, device="cpu", compute_type="int8")
+            print("Model loaded on CPU.")
         current_model_size = model_size
-        print("Model loaded.")
     return model
 
 def get_ffmpeg_path():
@@ -166,7 +194,7 @@ async def generate_subtitles(req: GenerateRequest):
     if not video_path:
         raise HTTPException(status_code=404, detail="Video not found")
         
-    whisper_model = get_model(req.model_size)
+    whisper_model = await asyncio.to_thread(get_model, req.model_size)
     ffmpeg_exe = get_ffmpeg_path()
     
     audio_path = os.path.join(UPLOAD_DIR, f"{req.video_id}.wav")
