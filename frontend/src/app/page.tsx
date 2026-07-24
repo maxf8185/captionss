@@ -445,39 +445,39 @@ export default function Home() {
   if (showSplash) {
     return (
       <div className="min-h-screen bg-[#020817] flex flex-col items-center justify-center transition-opacity duration-500">
-        <img src="/logo.png" alt="AutoCaps" className="h-24 md:h-32 object-contain animate-pulse mb-6" onError={(e) => { e.currentTarget.style.display='none' }} />
-        <h1 className="text-white text-4xl font-bold tracking-tight">Auto<span className="text-[#6366f1]">Caps</span></h1>
+        <img src="/logo.png" alt="AutoCaps" className="h-24 md:h-32 object-contain animate-pulse mb-6 rounded-[2rem] overflow-hidden shadow-[0_0_20px_rgba(14,165,233,0.5)]" onError={(e) => { e.currentTarget.style.display='none' }} />
+        <h1 className="text-white text-4xl font-bold tracking-tight">Auto<span className="text-[#0ea5e9]">Caps</span></h1>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg-main text-text-primary font-sans selection:bg-[#6366f1]/30">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#6366f1]/15 via-bg-main to-bg-main -z-10" />
+    <div className="min-h-screen bg-bg-main text-text-primary font-sans selection:bg-[#0ea5e9]/30">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0ea5e9]/15 via-bg-main to-bg-main -z-10" />
       
       <header className="border-b border-white/10 bg-glass-bg backdrop-blur-2xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="AutoCaps" className="h-8 object-contain" onError={(e) => { e.currentTarget.style.display='none' }} />
+            <img src="/logo.png" alt="AutoCaps" className="h-8 object-contain rounded-xl overflow-hidden" onError={(e) => { e.currentTarget.style.display='none' }} />
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-2xl tracking-tight hidden sm:block">Auto<span className="text-[#6366f1]">Caps</span></h1>
+              <h1 className="font-bold text-2xl tracking-tight hidden sm:block">Auto<span className="text-[#0ea5e9]">Caps</span></h1>
             </div>
           </div>
           <div className="flex gap-4 items-center">
             <button 
               onClick={() => setAppLang(appLang === "uk" ? "en" : "uk")}
-              className="flex items-center gap-2 text-sm font-medium hover:text-[#6366f1] transition-colors"
+              className="flex items-center gap-2 text-sm font-medium hover:text-[#0ea5e9] transition-colors"
             >
               <Globe className="w-4 h-4" /> {appLang.toUpperCase()}
             </button>
             <button 
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-2 text-sm font-medium hover:text-[#6366f1] transition-colors"
+              className="flex items-center gap-2 text-sm font-medium hover:text-[#0ea5e9] transition-colors"
             >
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             {videoUrl && (
-              <label className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full font-medium transition-all cursor-pointer shadow-[0_0_15px_rgba(147,51,234,0.4)]">
+              <label className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full font-medium transition-all cursor-pointer shadow-[0_0_15px_rgba(37,99,235,0.4)]">
                 <UploadCloud className="w-4 h-4" /> {t.upload_video}
                 <input type="file" className="hidden" accept="image/*,video/*" onChange={handleUploadOverlay} />
               </label>
@@ -485,7 +485,7 @@ export default function Home() {
             {videoId && (
               <button 
                 onClick={handleExport}
-                className="flex items-center gap-2 bg-[#6366f1] hover:bg-[#0046cc] text-white px-4 py-2 rounded-full font-medium transition-all active:scale-95 shadow-[0_0_15px_rgba(0,87,255,0.4)]"
+                className="flex items-center gap-2 bg-[#0ea5e9] hover:bg-[#0046cc] text-white px-4 py-2 rounded-full font-medium transition-all active:scale-95 shadow-[0_0_15px_rgba(0,87,255,0.4)]"
               >
                 <Download className="w-4 h-4" /> {t.export_video}
               </button>
@@ -513,7 +513,7 @@ export default function Home() {
             >
               {!videoUrl ? (
                 <label className="flex flex-col items-center justify-center h-full gap-4 cursor-pointer p-12 text-slate-400 hover:text-white transition-colors">
-                  <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#6366f1]/20 group-hover:text-[#6366f1] transition-all">
+                  <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#0ea5e9]/20 group-hover:text-[#0ea5e9] transition-all">
                     <UploadCloud className="w-8 h-8" />
                   </div>
                   <div className="text-center text-text-secondary">
@@ -569,10 +569,10 @@ export default function Home() {
                       onPointerLeave={() => setIsDraggingText(false)}
                     >
                     {isDraggingText && styles.pos_x === 50 && (
-                      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-[#6366f1] opacity-70 shadow-[0_0_10px_rgba(99,102,241,0.8)] pointer-events-none" />
+                      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-[#0ea5e9] opacity-70 shadow-[0_0_10px_rgba(14,165,233,0.8)] pointer-events-none" />
                     )}
                     <div 
-                      className={`absolute text-center px-4 pointer-events-auto cursor-move ${isDraggingText ? 'ring-2 ring-dashed ring-[#6366f1] bg-black/20 rounded' : 'hover:ring-2 hover:ring-dashed hover:ring-white/50 rounded'}`} 
+                      className={`absolute text-center px-4 pointer-events-auto cursor-move ${isDraggingText ? 'ring-2 ring-dashed ring-[#0ea5e9] bg-black/20 rounded' : 'hover:ring-2 hover:ring-dashed hover:ring-white/50 rounded'}`} 
                       style={{ 
                         left: `${styles.pos_x}%`,
                         top: `${styles.pos_y}%`,
@@ -747,7 +747,7 @@ export default function Home() {
                        return (
                          <div
                            key={ov.id}
-                           className={`absolute top-2 h-10 rounded border flex items-center px-1 overflow-hidden transition-all ${isActive ? 'bg-purple-600 border-purple-400 z-40' : 'bg-purple-900/80 border-purple-500/50 z-30'}`}
+                           className={`absolute top-2 h-10 rounded border flex items-center px-1 overflow-hidden transition-all ${isActive ? 'bg-blue-600 border-sky-400 z-40' : 'bg-blue-900/80 border-blue-500/50 z-30'}`}
                            style={{ 
                              left: `${startPct}%`, 
                              width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`,
@@ -778,12 +778,12 @@ export default function Home() {
                               >
                                 {isActive && (
                                   <>
-                                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#a855f7]" />
-                                    <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#a855f7]" />
+                                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#2563eb]" />
+                                    <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#2563eb]" />
                                   </>
                                 )}
                                 <input 
-                                  className="bg-transparent text-black font-semibold text-center w-full focus:outline-none focus:bg-white/40 rounded px-0.5 text-xs sm:text-sm selection:bg-[#6366f1]/20"
+                                  className="bg-transparent text-black font-semibold text-center w-full focus:outline-none focus:bg-white/40 rounded px-0.5 text-xs sm:text-sm selection:bg-[#0ea5e9]/20"
                                   value={w.word}
                                   onChange={(e) => {
                                       const newSegments = [...segments];
@@ -811,25 +811,25 @@ export default function Home() {
           <div className="flex bg-black/20 border border-white/5 rounded-2xl p-1.5 gap-1 shadow-2xl backdrop-blur-3xl overflow-x-auto custom-scrollbar relative z-10">
             <button 
               onClick={() => setActiveTab('generation')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'generation' ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'generation' ? 'bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <Wand2 className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_generation}</span>
             </button>
             <button 
               onClick={() => setActiveTab('styling')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'styling' ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'styling' ? 'bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <Settings className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_styling}</span>
             </button>
             <button 
               onClick={() => setActiveTab('editor')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'editor' ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'editor' ? 'bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <Type className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_editor}</span>
             </button>
             <button 
               onClick={() => setActiveTab('overlays')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'overlays' ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'overlays' ? 'bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
             >
               <UploadCloud className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_overlays}</span>
             </button>
@@ -844,7 +844,7 @@ export default function Home() {
                   <select 
                     value={language} 
                     onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#6366f1] transition-colors cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0ea5e9] transition-colors cursor-pointer appearance-none"
                   >
                     <option value="auto">{t.auto_detect}</option>
                     <option value="uk">{t.ukrainian}</option>
@@ -858,7 +858,7 @@ export default function Home() {
                   <select 
                     value={modelSize} 
                     onChange={(e) => setModelSize(e.target.value)}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#6366f1] transition-colors cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0ea5e9] transition-colors cursor-pointer appearance-none"
                   >
                     <option value="small">{t.level_low}</option>
                     <option value="medium">{t.level_medium}</option>
@@ -872,7 +872,7 @@ export default function Home() {
                   id="translate_opt"
                   checked={aiTask === "translate"}
                   onChange={(e) => setAiTask(e.target.checked ? "translate" : "transcribe")}
-                  className="w-4 h-4 rounded bg-player-bg border-white/10 text-[#6366f1] focus:ring-[#6366f1] focus:ring-offset-gray-900 cursor-pointer"
+                  className="w-4 h-4 rounded bg-player-bg border-white/10 text-[#0ea5e9] focus:ring-[#0ea5e9] focus:ring-offset-gray-900 cursor-pointer"
                 />
                 <label htmlFor="translate_opt" className="text-sm text-text-primary cursor-pointer flex-1">
                   Translate to English (Auto-Translation)
@@ -887,24 +887,24 @@ export default function Home() {
                   value={prompt} 
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder={t.placeholder}
-                  className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#6366f1] transition-colors h-20 resize-none text-sm custom-scrollbar"
+                  className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0ea5e9] transition-colors h-20 resize-none text-sm custom-scrollbar"
                 />
               </div>
 
               <div className="flex flex-col gap-4 mt-2">
                 {isGenerating ? (
-                  <div className="bg-black/40 border border-[#6366f1]/30 rounded-xl p-5 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,87,255,0.15)] relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#6366f1]/10 to-transparent animate-pulse" />
+                  <div className="bg-black/40 border border-[#0ea5e9]/30 rounded-xl p-5 flex flex-col gap-3 shadow-[0_0_30px_rgba(0,87,255,0.15)] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#0ea5e9]/10 to-transparent animate-pulse" />
                     <div className="flex justify-between items-center relative z-10">
                       <span className="text-sm font-semibold text-white flex items-center gap-2">
-                        <Wand2 className="w-4 h-4 text-[#6366f1] animate-spin-slow" /> 
+                        <Wand2 className="w-4 h-4 text-[#0ea5e9] animate-spin-slow" /> 
                         {t.processing}
                       </span>
-                      <span className="text-sm font-mono text-[#a855f7]">{generateProgress}%</span>
+                      <span className="text-sm font-mono text-[#2563eb]">{generateProgress}%</span>
                     </div>
                     <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden relative z-10">
                       <div 
-                        className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(0,161,255,0.8)]"
+                        className="bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(0,161,255,0.8)]"
                         style={{ width: `${generateProgress}%` }}
                       />
                     </div>
@@ -913,7 +913,7 @@ export default function Home() {
                   <button 
                     onClick={handleGenerate}
                     disabled={!videoId}
-                    className="w-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] hover:from-[#0046cc] hover:to-[#0081cc] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(0,87,255,0.4)] hover:shadow-[0_4px_25px_rgba(0,87,255,0.6)] hover:-translate-y-0.5 active:translate-y-0"
+                    className="w-full bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] hover:from-[#0046cc] hover:to-[#0081cc] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(0,87,255,0.4)] hover:shadow-[0_4px_25px_rgba(0,87,255,0.6)] hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <Wand2 className="w-5 h-5" /> {t.auto_generate}
                   </button>
@@ -927,7 +927,7 @@ export default function Home() {
               
               {/* Presets */}
               <div className="bg-black/20 border border-white/5 p-4 rounded-xl">
-                <label className="text-sm font-semibold text-text-primary mb-3 block flex items-center gap-2"><Wand2 className="w-4 h-4 text-[#6366f1]" /> AI Style Presets</label>
+                <label className="text-sm font-semibold text-text-primary mb-3 block flex items-center gap-2"><Wand2 className="w-4 h-4 text-[#0ea5e9]" /> AI Style Presets</label>
                 <div className="grid grid-cols-3 gap-2">
                   <button onClick={() => applyPreset('hormozi')} className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 hover:from-yellow-500/30 hover:to-orange-500/30 border border-yellow-500/30 rounded-lg p-2 text-xs font-bold text-yellow-500 transition-all">Hormozi (1 Word)</button>
                   <button onClick={() => applyPreset('karaoke')} className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 border border-blue-500/30 rounded-lg p-2 text-xs font-bold text-cyan-400 transition-all">Karaoke Pop</button>
@@ -942,7 +942,7 @@ export default function Home() {
                     <select 
                       value={styles.font_name}
                       onChange={(e) => setStyles({...styles, font_name: e.target.value})}
-                      className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
+                      className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#0ea5e9] cursor-pointer appearance-none transition-colors"
                     >
                       <option value="Arial">Arial</option>
                       <option value="Impact">Impact</option>
@@ -950,7 +950,7 @@ export default function Home() {
                       <option value="Comic Sans MS">Comic Sans</option>
                       {customFonts.map(f => <option key={f} value={f}>{f}</option>)}
                     </select>
-                    <label className="bg-[#6366f1] hover:bg-[#0046cc] text-white px-3 py-2.5 rounded-lg cursor-pointer transition-colors flex items-center justify-center shrink-0" title="Upload Custom Font">
+                    <label className="bg-[#0ea5e9] hover:bg-[#0046cc] text-white px-3 py-2.5 rounded-lg cursor-pointer transition-colors flex items-center justify-center shrink-0" title="Upload Custom Font">
                       <span className="font-bold">+</span>
                       <input type="file" className="hidden" accept=".ttf,.otf" onChange={handleUploadFont} />
                     </label>
@@ -966,7 +966,7 @@ export default function Home() {
                       else if (val === "Middle") setStyles({...styles, position: val, pos_y: 50});
                       else if (val === "Top") setStyles({...styles, position: val, pos_y: 10});
                     }}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#0ea5e9] cursor-pointer appearance-none transition-colors"
                   >
                     <option value="Bottom">{t.bottom}</option>
                     <option value="Middle">{t.middle}</option>
@@ -982,7 +982,7 @@ export default function Home() {
                   <select 
                     value={styles.effect}
                     onChange={(e) => setStyles({...styles, effect: e.target.value})}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#0ea5e9] cursor-pointer appearance-none transition-colors"
                   >
                     <option value="karaoke">{t.effect_karaoke}</option>
                     <option value="highlight">{t.effect_highlight}</option>
@@ -994,7 +994,7 @@ export default function Home() {
                   <select 
                     value={styles.animation_style}
                     onChange={(e) => setStyles({...styles, animation_style: e.target.value})}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#0ea5e9] cursor-pointer appearance-none transition-colors"
                   >
                     <option value="smooth">Smooth (Pop-up)</option>
                     <option value="pop">Dynamic (Spring/Pop)</option>
@@ -1006,7 +1006,7 @@ export default function Home() {
                   <select 
                     value={styles.aspect_ratio}
                     onChange={(e) => setStyles({...styles, aspect_ratio: e.target.value})}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
+                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#0ea5e9] cursor-pointer appearance-none transition-colors"
                   >
                     <option value="original">Original</option>
                     <option value="9:16">9:16 (TikTok)</option>
@@ -1112,7 +1112,7 @@ export default function Home() {
                     </button>
                   </div>
                   <div className="flex gap-1.5">
-                    <label className="flex items-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer">
+                    <label className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 text-sky-400 border border-blue-500/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer">
                       <UploadCloud className="w-4 h-4" /> <span className="hidden sm:inline">{t.upload_srt}</span>
                       <input type="file" className="hidden" accept=".srt" onChange={handleUploadSrt} />
                     </label>
@@ -1144,7 +1144,7 @@ export default function Home() {
                                 newSegs[idx].start = parseFloat(e.target.value) || 0;
                                 setSegments(newSegs);
                               }}
-                              className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#a855f7] outline-none text-right font-mono" 
+                              className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#2563eb] outline-none text-right font-mono" 
                             />
                             <span className="text-xs text-white/20">⟶</span>
                             <input 
@@ -1155,7 +1155,7 @@ export default function Home() {
                                 newSegs[idx].end = parseFloat(e.target.value) || 0;
                                 setSegments(newSegs);
                               }}
-                              className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#a855f7] outline-none text-left font-mono" 
+                              className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#2563eb] outline-none text-left font-mono" 
                             />
                           </span>
                           <button 
@@ -1189,7 +1189,7 @@ export default function Home() {
               <div className="flex flex-col flex-1 h-full animate-in fade-in duration-300">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold flex items-center gap-2 text-text-primary">
-                    <UploadCloud className="w-5 h-5 text-purple-400" /> {t.b_roll_elements}
+                    <UploadCloud className="w-5 h-5 text-sky-400" /> {t.b_roll_elements}
                   </h2>
                 </div>
                 {overlays.length === 0 ? (
@@ -1213,7 +1213,7 @@ export default function Home() {
                                   newOvs[i].start = parseFloat(e.target.value) || 0;
                                   setOverlays(newOvs);
                                 }}
-                                className="bg-bg-card border border-white/10 rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-purple-500"
+                                className="bg-bg-card border border-white/10 rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-blue-500"
                               />
                             </div>
                             <div className="flex items-center justify-between gap-2">
@@ -1226,7 +1226,7 @@ export default function Home() {
                                   newOvs[i].end = parseFloat(e.target.value) || duration;
                                   setOverlays(newOvs);
                                 }}
-                                className="bg-bg-card border border-white/10 rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-purple-500"
+                                className="bg-bg-card border border-white/10 rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-blue-500"
                               />
                             </div>
                           </div>

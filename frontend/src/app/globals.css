@@ -43,8 +43,8 @@
 
 body {
   background-color: var(--bg-main);
-  background-image: radial-gradient(circle at top right, rgba(99, 102, 241, 0.1), transparent 40%),
-                    radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.1), transparent 40%);
+  background-image: radial-gradient(circle at top right, rgba(14, 165, 233, 0.1), transparent 40%),
+                    radial-gradient(circle at bottom left, rgba(37, 99, 235, 0.1), transparent 40%);
   background-attachment: fixed;
   color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
