@@ -15,6 +15,11 @@ import time
 from typing import List, Optional
 from pydantic import BaseModel
 import imageio_ffmpeg
+import cv2
+try:
+    import mediapipe as mp
+except ImportError:
+    mp = None
 
 app = FastAPI()
 
@@ -94,6 +99,38 @@ def get_model(model_size="base"):
 
 def get_ffmpeg_path():
     return imageio_ffmpeg.get_ffmpeg_exe()
+
+def get_face_bboxes_for_segments(video_path: str, segments: List[dict]):
+    if mp is None:
+        return {}, 0.5
+    face_bboxes = {}
+    face_x_centers = []
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        return {}, 0.5
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if not fps or fps <= 0:
+        fps = 30.0
+    
+    mp_face_detection = mp.solutions.face_detection
+    with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5) as face_detection:
+        for i, seg in enumerate(segments):
+            start_time = seg.get('start', 0)
+            end_time = seg.get('end', 0)
+            mid_time = (start_time + end_time) / 2
+            frame_idx = int(mid_time * fps)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+            success, image = cap.read()
+            if success:
+                image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                results = face_detection.process(image_rgb)
+                if results.detections:
+                    bbox = results.detections[0].location_data.relative_bounding_box
+                    face_bboxes[i] = (bbox.ymin, bbox.ymin + bbox.height)
+                    face_x_centers.append(bbox.xmin + bbox.width / 2)
+    cap.release()
+    avg_x = sum(face_x_centers) / len(face_x_centers) if face_x_centers else 0.5
+    return face_bboxes, avg_x
 
 def get_video_dimensions(video_path: str, ffmpeg_exe: str):
     try:
@@ -260,7 +297,7 @@ async def generate_subtitles(req: GenerateRequest):
         
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")
 
-def generate_ass_file(segments: List[dict], styles: StyleOptions, ass_path: str, video_width: int, video_height: int):
+def generate_ass_file(segments: List[dict], styles: StyleOptions, ass_path: str, video_width: int, video_height: int, face_bboxes: dict = None):
     alignment = 5 # Center middle alignment for precise positioning
         
     def hex_to_ass(hex_color):
@@ -299,7 +336,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         cs = int((seconds * 100) % 100)
         return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
 
-    for seg in segments:
+    for seg_idx, seg in enumerate(segments):
         words = seg.get('words', [])
         if not words:
             continue
@@ -341,6 +378,18 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             
         pos_x_px = int(video_width * (styles.pos_x / 100.0))
         pos_y_px = int(video_height * (styles.pos_y / 100.0))
+        
+        if face_bboxes and seg_idx in face_bboxes:
+            ymin, ymax = face_bboxes[seg_idx]
+            face_ymin_px = int(ymin * video_height)
+            face_ymax_px = int(ymax * video_height)
+            text_height = int(video_height * (styles.font_size / 100.0))
+            if face_ymin_px - text_height < pos_y_px < face_ymax_px + text_height:
+                if face_ymax_px + text_height + 20 < video_height:
+                    pos_y_px = face_ymax_px + text_height + 20
+                else:
+                    pos_y_px = max(text_height, face_ymin_px - text_height - 20)
+                    
         pos_tag = f"{{\\pos({pos_x_px},{pos_y_px})}}"
         
         for screen in screens:
@@ -368,7 +417,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                         line_str = ""
                         for w in line:
                             if w == active_w:
-                                if styles.animation_style == "smooth":
+                                if styles.animation_style == "pop":
+                                    line_str += f"{{\\c{highlight}\\fscx150\\fscy150\\t(0,150,\\fscx100\\fscy100)}}{w['word']}{{\\fscx100\\fscy100\\c{primary}}} "
+                                elif styles.animation_style == "smooth":
                                     line_str += f"{{\\c{highlight}\\t(0,100,\\fscx115\\fscy115)}}{w['word']}{{\\fscx100\\fscy100\\c{primary}}} "
                                 else:
                                     line_str += f"{{\\c{highlight}\\fscx115\\fscy115}}{w['word']}{{\\fscx100\\fscy100\\c{primary}}} "
@@ -398,6 +449,9 @@ async def export_video(req: ExportRequest):
     video_width, video_height = get_video_dimensions(video_path, ffmpeg_exe)
     
     crop_filter = ""
+    segments_dicts = [s.dict() for s in req.segments]
+    face_bboxes, avg_face_x = get_face_bboxes_for_segments(video_path, segments_dicts)
+    
     if req.styles.aspect_ratio == "9:16":
         target_width = int(video_height * 9 / 16)
         # Ensure we don't scale up width
@@ -407,11 +461,14 @@ async def export_video(req: ExportRequest):
             crop_filter = f"crop={target_width}:{target_height}"
             video_height = target_height
         else:
-            crop_filter = f"crop={target_width}:{video_height}"
+            # Smart crop: center on avg_face_x
+            target_x = int((avg_face_x * video_width) - (target_width / 2))
+            target_x = max(0, min(target_x, video_width - target_width))
+            crop_filter = f"crop={target_width}:{video_height}:{target_x}:0"
             video_width = target_width
         
     ass_path = os.path.join(OUTPUT_DIR, f"{req.video_id}.ass")
-    generate_ass_file([s.dict() for s in req.segments], req.styles, ass_path, video_width, video_height)
+    generate_ass_file(segments_dicts, req.styles, ass_path, video_width, video_height, face_bboxes)
     
     out_video_path = req.save_path if req.save_path else os.path.join(OUTPUT_DIR, f"{req.video_id}_final.mp4")
     

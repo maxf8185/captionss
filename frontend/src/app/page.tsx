@@ -675,9 +675,7 @@ export default function Home() {
                                   style={{ 
                                     color: color,
                                     opacity: opacity,
-                                    transform: isActive ? "scale(1.15)" : "scale(1)",
-                                    transformOrigin: "center bottom",
-                                    transition: "color 0.15s ease, opacity 0.1s ease, transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1)"
+                                    transition: "color 0.15s ease, opacity 0.1s ease"
                                   }}
                                   className="inline-block mx-[0.1em] font-bold break-words"
                                 >
@@ -704,6 +702,16 @@ export default function Home() {
                    {t.timeline_placeholder}
                  </div>
                ) : (
+                 <>
+                 <div className="flex items-center gap-2 px-2 overflow-x-auto custom-scrollbar pb-1">
+                   <span className="text-xs text-text-secondary whitespace-nowrap">Quick Emojis (Click to copy):</span>
+                   {['🚀', '🔥', '💡', '💰', '👇', '👀', '🤯', '✅', '❌', '❤️', '😅', '🤔', '📈'].map(emoji => (
+                     <button key={emoji} className="hover:bg-white/10 rounded px-1 transition-colors text-sm" onClick={(e) => {
+                       e.preventDefault();
+                       navigator.clipboard.writeText(emoji);
+                     }} title="Click to copy emoji">{emoji}</button>
+                   ))}
+                 </div>
                  <div 
                    ref={timelineRef}
                    className="relative h-40 overflow-x-auto overflow-y-hidden rounded-lg bg-black cursor-pointer custom-scrollbar border border-white/5"
@@ -789,6 +797,7 @@ export default function Home() {
                      ))}
                    </div>
                  </div>
+                 </>
                )}
             </div>
           )}
@@ -988,6 +997,7 @@ export default function Home() {
                     className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#6366f1] cursor-pointer appearance-none transition-colors"
                   >
                     <option value="smooth">Smooth (Pop-up)</option>
+                    <option value="pop">Dynamic (Spring/Pop)</option>
                     <option value="instant">Instant (Classic)</option>
                   </select>
                 </div>

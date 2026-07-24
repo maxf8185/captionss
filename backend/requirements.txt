@@ -4,5 +4,6 @@ python-multipart
 faster-whisper
 ffmpeg-python
 pysrt
-pywebview  
- 
+pywebview
+mediapipe
+opencv-python-headless
