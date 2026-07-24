@@ -7,3 +7,4 @@ pysrt
 pywebview
 mediapipe
 opencv-python-headless
+pyinstaller
