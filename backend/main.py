@@ -18,6 +18,7 @@ import imageio_ffmpeg
 import cv2
 try:
     import mediapipe as mp
+    import mediapipe.solutions.face_detection
 except ImportError:
     mp = None
 
