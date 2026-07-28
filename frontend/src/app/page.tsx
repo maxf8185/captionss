@@ -2,6 +2,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { UploadCloud, Video, Settings, Wand2, Download, Palette, Type, AlignCenter, Moon, Sun, Globe, Trash2 } from "lucide-react";
 import { translations, Language } from "./translations";
+import { usePlayerStore, Overlay } from "../store/playerStore";
+import Timeline from "../components/Timeline";
+import SubtitleOverlay from "../components/SubtitleOverlay";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -20,19 +23,10 @@ export default function Home() {
   const [generateProgress, setGenerateProgress] = useState<number>(0);
 
   const [prompt, setPrompt] = useState("");
-  type Overlay = {
-    id: string;
-    url: string;
-    start: number;
-    end: number;
-  };
+  const setVideoRef = usePlayerStore(state => state.setVideoRef);
   
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
-  const [overlays, setOverlays] = useState<Overlay[]>([]);
-  const [videoAspect, setVideoAspect] = useState<number | null>(null);
   const [isDraggingText, setIsDraggingText] = useState(false);
   
   const [customFonts, setCustomFonts] = useState<string[]>([]);
@@ -50,9 +44,19 @@ export default function Home() {
     }
   }, [theme]);
 
-  const [duration, setDuration] = useState(1);
-  const [thumbnails, setThumbnails] = useState<string[]>([]);
+  }, [theme]);
+
   const timelineRef = useRef<HTMLDivElement>(null);
+  const videoAspect = usePlayerStore(state => state.videoAspect);
+  const segments = usePlayerStore(state => state.segments);
+  const setSegments = usePlayerStore(state => state.setSegments);
+  const overlays = usePlayerStore(state => state.overlays);
+  const setOverlays = usePlayerStore(state => state.setOverlays);
+  const setDuration = usePlayerStore(state => state.setDuration);
+  const setVideoAspect = usePlayerStore(state => state.setVideoAspect);
+  const setCurrentTime = usePlayerStore(state => state.setCurrentTime);
+  const setIsPlaying = usePlayerStore(state => state.setIsPlaying);
+  const setThumbnails = usePlayerStore(state => state.setThumbnails);
   
   const [styles, setStyles] = useState({
     font_name: "Arial",
@@ -85,6 +89,7 @@ export default function Home() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    setVideoRef(videoRef);
 
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     const handlePlay = () => setIsPlaying(true);
@@ -549,145 +554,13 @@ export default function Home() {
                   </button>
                   
                   {/* Custom Subtitle Overlay */}
-                  {activeSegment && videoAspect && (
-                    <div 
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        containerType: "size", // Makes cqh relative to this container (which exactly matches the video)
-                      }}
-                      onPointerMove={(e) => {
-                         if (!isDraggingText) return;
-                         const rect = e.currentTarget.getBoundingClientRect();
-                         let x = ((e.clientX - rect.left) / rect.width) * 100;
-                         const y = ((e.clientY - rect.top) / rect.height) * 100;
-                         // Magnetic snap to center
-                         if (Math.abs(x - 50) < 3) x = 50;
-                         setStyles(s => ({ ...s, pos_x: Math.max(0, Math.min(100, x)), pos_y: Math.max(0, Math.min(100, y)) }));
-                      }}
-                      onPointerUp={() => setIsDraggingText(false)}
-                      onPointerLeave={() => setIsDraggingText(false)}
-                    >
-                    {isDraggingText && styles.pos_x === 50 && (
-                      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-[#0ea5e9] opacity-70 shadow-[0_0_10px_rgba(14,165,233,0.8)] pointer-events-none" />
-                    )}
-                    <div 
-                      className={`absolute text-center px-4 pointer-events-auto cursor-move ${isDraggingText ? 'ring-2 ring-dashed ring-[#0ea5e9] bg-black/20 rounded' : 'hover:ring-2 hover:ring-dashed hover:ring-white/50 rounded'}`} 
-                      style={{ 
-                        left: `${styles.pos_x}%`,
-                        top: `${styles.pos_y}%`,
-                        transform: 'translate(-50%, -50%)',
-                        width: 'max-content',
-                        maxWidth: '90%',
-                        fontFamily: styles.font_name, 
-                        fontSize: `${styles.font_size}cqh`, 
-                        lineHeight: 1.2,
-                        WebkitTextStroke: `0.06em ${styles.outline_color}`,
-                        textShadow: `0px 0.05em 0.3em rgba(0,0,0,0.8), 0px 0px 0.1em ${styles.outline_color}`
-                      }}
-                      onPointerDown={(e) => {
-                         setIsDraggingText(true);
-                         e.stopPropagation();
-                      }}
-                    >
-                      {(() => {
-                        // Implement backend screen splitting logic
-                        const screens: any[][][] = [];
-                        let current_screen: any[][] = [];
-                        let current_line: any[] = [];
-                        
-                        const MAX_CHARS_PER_LINE = 22;
-                        let line_char_count = 0;
-                        
-                        for (const word of activeSegment.words) {
-                          const wordLen = word.word.length;
-                          
-                          if (current_line.length > 0 && line_char_count + wordLen > MAX_CHARS_PER_LINE) {
-                            current_screen.push(current_line);
-                            current_line = [];
-                            line_char_count = 0;
-                            if (current_screen.length >= styles.max_lines) {
-                              screens.push(current_screen);
-                              current_screen = [];
-                            }
-                          }
-                          
-                          current_line.push(word);
-                          line_char_count += wordLen + 1;
-                          
-                          if (current_line.length >= styles.words_per_line) {
-                            current_screen.push(current_line);
-                            current_line = [];
-                            line_char_count = 0;
-                            if (current_screen.length >= styles.max_lines) {
-                              screens.push(current_screen);
-                              current_screen = [];
-                            }
-                          }
-                        }
-                        if (current_line.length > 0) current_screen.push(current_line);
-                        if (current_screen.length > 0) screens.push(current_screen);
-                        
-                        // Find the active screen
-                        let activeScreen = screens.find(screen => {
-                          const start = screen[0][0].start;
-                          const end = screen[screen.length - 1][screen[screen.length - 1].length - 1].end;
-                          return currentTime >= start && currentTime <= end;
-                        });
-                        
-                        // If no screen is strictly active (e.g. between words), pick the closest one or just the last one we were in
-                        if (!activeScreen && screens.length > 0) {
-                           activeScreen = screens.find(screen => currentTime <= screen[screen.length - 1][screen[screen.length - 1].length - 1].end) || screens[screens.length - 1];
-                        }
+                  <SubtitleOverlay 
+                    styles={styles} 
+                    isDraggingText={isDraggingText} 
+                    setIsDraggingText={setIsDraggingText} 
+                    setStyles={setStyles} 
+                  />
 
-                        if (!activeScreen) return null;
-
-                        return activeScreen.map((line, lineIndex) => (
-                          <div key={lineIndex}>
-                            {line.map((w: any, wIndex: number) => {
-                              let next_start = w.end;
-                              if (wIndex + 1 < line.length) {
-                                next_start = line[wIndex + 1].start;
-                              } else if (lineIndex + 1 < activeScreen.length && activeScreen[lineIndex + 1].length > 0) {
-                                next_start = activeScreen[lineIndex + 1][0].start;
-                              }
-                              // Also fallback to the segment end if it's the last word?
-                              // But w.end is fine for the very last word.
-
-                              const isActive = currentTime >= w.start && currentTime < next_start;
-                              const isPast = currentTime >= next_start;
-                              
-                              let color = styles.primary_color;
-                              let opacity = 1;
-                              
-                              if (styles.effect === "karaoke") {
-                                color = isActive ? styles.highlight_color : styles.primary_color;
-                              } else if (styles.effect === "highlight") {
-                                color = isActive ? styles.highlight_color : styles.primary_color;
-                              } else if (styles.effect === "reveal") {
-                                color = isActive ? styles.highlight_color : styles.primary_color;
-                                opacity = (isActive || isPast) ? 1 : 0;
-                              }
-
-                              return (
-                                <span 
-                                  key={wIndex}
-                                  style={{ 
-                                    color: color,
-                                    opacity: opacity,
-                                    transition: "color 0.15s ease, opacity 0.1s ease"
-                                  }}
-                                  className="inline-block mx-[0.1em] font-bold break-words"
-                                >
-                                  {w.word}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        ));
-                      })()}
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </div>
@@ -703,105 +576,6 @@ export default function Home() {
                ) : (
                  <>
                  <div className="flex items-center gap-2 px-2 overflow-x-auto custom-scrollbar pb-1">
-                   <span className="text-xs text-text-secondary whitespace-nowrap">Quick Emojis (Click to copy):</span>
-                   {['🚀', '🔥', '💡', '💰', '👇', '👀', '🤯', '✅', '❌', '❤️', '😅', '🤔', '📈'].map(emoji => (
-                     <button key={emoji} className="hover:bg-white/10 rounded px-1 transition-colors text-sm" onClick={(e) => {
-                       e.preventDefault();
-                       navigator.clipboard.writeText(emoji);
-                     }} title="Click to copy emoji">{emoji}</button>
-                   ))}
-                 </div>
-                 <div 
-                   ref={timelineRef}
-                   className="relative h-40 overflow-x-auto overflow-y-hidden rounded-lg bg-black cursor-pointer custom-scrollbar border border-white/5"
-                   onClick={(e) => {
-                     if (!timelineRef.current || !videoRef.current) return;
-                     const rect = timelineRef.current.getBoundingClientRect();
-                     const clickX = e.clientX - rect.left + timelineRef.current.scrollLeft;
-                     const newTime = (clickX / (duration * 150)) * duration;
-                     videoRef.current.currentTime = newTime;
-                   }}
-                 >
-                   <div className="relative h-full" style={{ width: `${Math.max(800, duration * 150)}px` }}>
-                     {/* Thumbnails Background removed for cleaner UI */}
-                     
-                     {/* Time Ruler */}
-                     <div className="absolute top-0 left-0 bottom-0 pointer-events-none z-10 flex">
-                       {Array.from({ length: Math.ceil(duration) }).map((_, i) => (
-                         <div key={i} className="relative border-l border-white/10 h-full flex flex-col justify-start pl-1 pt-1 text-[9px] font-mono text-white/40" style={{ width: '150px', flexShrink: 0 }}>
-                           {new Date(i * 1000).toISOString().substring(14, 19)}
-                         </div>
-                       ))}
-                     </div>
-
-                     {/* Playhead */}
-                     <div 
-                       className="absolute top-0 bottom-0 w-[1px] bg-red-500 z-50 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-all duration-75"
-                       style={{ left: `${(currentTime / duration) * 100}%` }}
-                     >
-                       <div className="absolute top-0 -left-1.5 w-3 h-3 bg-red-500 rounded-sm shadow-[0_0_10px_rgba(239,68,68,1)] flex items-center justify-center">
-                         <div className="w-0.5 h-1.5 bg-white/50 rounded-full" />
-                       </div>
-                     </div>
-
-                     {/* Overlay Blocks (Top Track) */}
-                     {overlays.map((ov) => {
-                       const startPct = (ov.start / duration) * 100;
-                       const widthPct = ((ov.end - ov.start) / duration) * 100;
-                       const isActive = currentTime >= ov.start && currentTime <= ov.end;
-                       return (
-                         <div
-                           key={ov.id}
-                           className={`absolute top-6 h-10 rounded-md border flex items-center px-1 overflow-hidden transition-all shadow-sm ${isActive ? 'bg-[#0ea5e9]/20 border-[#0ea5e9] z-40' : 'bg-[#0ea5e9]/10 border-[#0ea5e9]/30 hover:border-[#0ea5e9]/50 z-30'}`}
-                           style={{ 
-                             left: `${startPct}%`, 
-                             width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`,
-                           }}
-                           onClick={(e) => e.stopPropagation()}
-                         >
-                           <img src={ov.url} className="h-full w-full object-cover opacity-80 pointer-events-none" />
-                         </div>
-                       );
-                     })}
-
-                     {/* Words Blocks (Bottom Track) */}
-                     {segments.map((s, i) => (
-                        s.words.map((w: any, wIndex: number) => {
-                           const startPct = (w.start / duration) * 100;
-                           const widthPct = ((w.end - w.start) / duration) * 100;
-                           const isActive = currentTime >= w.start && currentTime <= w.end;
-                           
-                           return (
-                              <div 
-                                key={`${i}-${wIndex}`}
-                                className={`absolute top-20 bottom-2 rounded-lg flex items-center justify-center transition-all border shadow-sm ${isActive ? 'bg-[#ffe534]/90 border-white/50 shadow-[0_0_15px_rgba(255,229,52,0.3)] z-40 scale-[1.02]' : 'bg-[#ffe534]/70 border-white/10 hover:bg-[#ffe534]/80 hover:border-white/30 z-30'}`}
-                                style={{ 
-                                  left: `${startPct}%`, 
-                                  width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`, // min width 20px
-                                }}
-                                onClick={(e) => e.stopPropagation()} // prevent seeking on edit
-                              >
-                                {isActive && (
-                                  <>
-                                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#2563eb]" />
-                                    <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#2563eb]" />
-                                  </>
-                                )}
-                                <input 
-                                  className="bg-transparent text-black font-semibold text-center w-full h-full focus:outline-none focus:bg-white/50 rounded-md px-1 text-xs sm:text-sm selection:bg-[#0ea5e9]/30 transition-colors"
-                                  value={w.word}
-                                  onChange={(e) => {
-                                      const newSegments = [...segments];
-                                      newSegments[i].words[wIndex].word = e.target.value;
-                                      setSegments(newSegments);
-                                  }}
-                                />
-                              </div>
-                           )
-                        })
-                     ))}
-                   </div>
-                 </div>
                  </>
                )}
             </div>
