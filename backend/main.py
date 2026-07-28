@@ -345,6 +345,14 @@ async def generate_subtitles(req: GenerateRequest):
         
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")
 
+
+def hex_to_ass_color(hex_color: str) -> str:
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) == 6:
+        r, g, b = hex_color[0:2], hex_color[2:4], hex_color[4:6]
+        return f"&H{b}{g}{r}&"
+    return "&HFFFFFF&"
+
 def generate_ass_file(segments: List[dict], styles: StyleOptions, ass_path: str, video_width: int, video_height: int, face_bboxes: dict = None):
     alignment = 5 # Center middle alignment for precise positioning
         
@@ -728,3 +736,52 @@ async def remove_silence(req: SilenceRemoveRequest):
         "url": f"/api/static_uploads/{new_video_id}{ext}",
         "segments": new_segments
     }
+
+
+@app.post("/api/diarize")
+async def diarize_audio(req: SilenceRemoveRequest):
+    if not is_valid_uuid(req.video_id):
+        raise HTTPException(status_code=400, detail="Invalid video ID")
+        
+    audio_path = os.path.join(UPLOAD_DIR, f"{req.video_id}.wav")
+    if not os.path.exists(audio_path):
+        raise HTTPException(status_code=404, detail="Audio not found")
+        
+    try:
+        import librosa
+        import numpy as np
+        from sklearn.cluster import KMeans
+        
+        # Load audio
+        y, sr = librosa.load(audio_path, sr=16000)
+        
+        # Extract features for each segment
+        features = []
+        valid_indices = []
+        for i, seg in enumerate(req.segments):
+            start_sample = int(seg['start'] * sr)
+            end_sample = int(seg['end'] * sr)
+            
+            # Ensure within bounds
+            start_sample = max(0, min(start_sample, len(y)-1))
+            end_sample = max(0, min(end_sample, len(y)))
+            
+            chunk = y[start_sample:end_sample]
+            if len(chunk) > 100:
+                mfcc = librosa.feature.mfcc(y=chunk, sr=sr, n_mfcc=13)
+                mfcc_mean = np.mean(mfcc.T, axis=0)
+                features.append(mfcc_mean)
+                valid_indices.append(i)
+                
+        if len(features) > 1:
+            X = np.array(features)
+            kmeans = KMeans(n_clusters=2, random_state=42, n_init=10)
+            labels = kmeans.fit_predict(X)
+            
+            for f_idx, seg_idx in enumerate(valid_indices):
+                req.segments[seg_idx]['speaker'] = f"SPEAKER_{labels[f_idx] + 1}"
+                
+    except Exception as e:
+        print(f"Diarization error: {e}")
+        
+    return {"status": "success", "segments": req.segments}

@@ -173,6 +173,25 @@ export default function Home() {
   };
 
   
+  
+  const handleDiarize = async () => {
+    if (!videoId || segments.length === 0) return;
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/diarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_id: videoId, segments }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSegments(data.segments);
+        alert('Speakers recognized and color-coded!');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleRemoveSilence = async () => {
     if (!videoId || segments.length === 0) return;
     setIsRemovingSilence(true);
