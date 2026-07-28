@@ -67,7 +67,6 @@ export default function Home() {
     words_per_line: 3,
     max_lines: 1,
     aspect_ratio: "original", // original, 9:16
-    animation_style: "smooth", // smooth, instant
   });
 
   const applyPreset = (preset: string) => {
@@ -429,9 +428,9 @@ export default function Home() {
       } else {
         alert("Video successfully saved to: " + savePath);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setErrorMsg("Failed to export video.");
+      setErrorMsg(e.message || "Failed to export video.");
     } finally {
       setIsGenerating(false);
     }
@@ -995,18 +994,7 @@ export default function Home() {
                     <option value="reveal">{t.effect_reveal}</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-sm text-text-secondary mb-2 block">Animation Style</label>
-                  <select 
-                    value={styles.animation_style}
-                    onChange={(e) => setStyles({...styles, animation_style: e.target.value})}
-                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent cursor-pointer appearance-none transition-all shadow-sm"
-                  >
-                    <option value="smooth">Smooth (Pop-up)</option>
-                    <option value="pop">Dynamic (Spring/Pop)</option>
-                    <option value="instant">Instant (Classic)</option>
-                  </select>
-                </div>
+
                 <div>
                   <label className="text-sm text-text-secondary mb-2 block">Aspect Ratio</label>
                   <select 

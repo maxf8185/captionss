@@ -187,7 +187,6 @@ class StyleOptions(BaseModel):
     words_per_line: int = 5
     max_lines: int = 2
     aspect_ratio: str = "original"
-    animation_style: str = "smooth"
 
 class OverlayConfig(BaseModel):
     id: str
@@ -413,19 +412,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     w_start = format_time(active_w['start'])
                     w_end = format_time(words_in_screen[i+1]['start']) if i + 1 < len(words_in_screen) else format_time(active_w['end'])
                     
-                    text_layer = ""
+                    text_layer = "{\\alpha&H60&}"
                     for i_line, line in enumerate(screen):
                         line_str = ""
                         for w in line:
                             if w == active_w:
-                                if styles.animation_style == "pop":
-                                    line_str += f"{{\\c{highlight}\\fscx150\\fscy150\\t(0,150,\\fscx100\\fscy100)}}{w['word']}{{\\fscx100\\fscy100\\c{primary}}} "
-                                elif styles.animation_style == "smooth":
-                                    line_str += f"{{\\c{highlight}\\t(0,100,\\fscx115\\fscy115)}}{w['word']}{{\\fscx100\\fscy100\\c{primary}}} "
-                                else:
-                                    line_str += f"{{\\c{highlight}\\fscx115\\fscy115}}{w['word']}{{\\fscx100\\fscy100\\c{primary}}} "
+                                # Professional Subme-style clean highlight with subtle 105% bump and opaque active color
+                                line_str += f"{{\\alpha&H00&\\c{highlight}\\fscx105\\fscy105\\t(0,100,\\fscx100\\fscy100)}}{w['word']}{{\\fscx100\\fscy100\\c{primary}\\alpha&H60&}} "
                             elif styles.effect == "reveal" and w['start'] > active_w['start']:
-                                line_str += f"{{\\alpha&HFF&}}{w['word']}{{\\alpha}} "
+                                line_str += f"{{\\alpha&HFF&}}{w['word']}{{\\alpha&H60&}} "
                             else:
                                 line_str += f"{w['word']} "
                         text_layer += line_str.strip() + "\\N"
