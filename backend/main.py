@@ -256,8 +256,16 @@ async def generate_subtitles(req: GenerateRequest):
     
     audio_path = os.path.join(UPLOAD_DIR, f"{req.video_id}.wav")
     creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
-    subprocess.run([ffmpeg_exe, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_path], check=True, stdout=None, stderr=None, creationflags=creation_flags)
-    
+    process = await asyncio.create_subprocess_exec(
+        ffmpeg_exe, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_path,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        creationflags=creation_flags
+    )
+    await process.communicate()
+    if process.returncode != 0:
+        raise HTTPException(status_code=500, detail="Failed to extract audio")
+
     lang = req.language if req.language != 'auto' else None
     initial_prompt = req.prompt if req.prompt and len(req.prompt.strip()) > 0 else None
     
@@ -514,10 +522,16 @@ async def export_video(req: ExportRequest):
     creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
     
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, creationflags=creation_flags)
-        if result.returncode != 0:
-            print(result.stderr)
-            raise Exception(result.stderr)
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            creationflags=creation_flags
+        )
+        stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            print(stderr.decode())
+            raise Exception(stderr.decode())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error exporting video: {str(e)}")
         
