@@ -417,8 +417,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                         line_str = ""
                         for w in line:
                             if w == active_w:
-                                # Professional Subme-style clean highlight with subtle 105% bump and opaque active color
-                                line_str += f"{{\\alpha&H00&\\c{highlight}\\fscx105\\fscy105\\t(0,100,\\fscx100\\fscy100)}}{w['word']}{{\\fscx100\\fscy100\\c{primary}\\alpha&H60&}} "
+                                # Professional Subme-style clean highlight without any scale bump
+                                line_str += f"{{\\alpha&H00&\\c{highlight}}}{w['word']}{{\\c{primary}\\alpha&H60&}} "
                             elif styles.effect == "reveal" and w['start'] > active_w['start']:
                                 line_str += f"{{\\alpha&HFF&}}{w['word']}{{\\alpha&H60&}} "
                             else:
