@@ -724,19 +724,25 @@ export default function Home() {
                    }}
                  >
                    <div className="relative h-full" style={{ width: `${Math.max(800, duration * 150)}px` }}>
-                     {/* Thumbnails Background */}
-                     <div className="absolute inset-0 flex opacity-40 pointer-events-none">
-                       {thumbnails.map((t, i) => (
-                          <img key={i} src={t} className="h-full object-cover flex-1 border-r border-white/5" />
+                     {/* Thumbnails Background removed for cleaner UI */}
+                     
+                     {/* Time Ruler */}
+                     <div className="absolute top-0 left-0 bottom-0 pointer-events-none z-10 flex">
+                       {Array.from({ length: Math.ceil(duration) }).map((_, i) => (
+                         <div key={i} className="relative border-l border-white/10 h-full flex flex-col justify-start pl-1 pt-1 text-[9px] font-mono text-white/40" style={{ width: '150px', flexShrink: 0 }}>
+                           {new Date(i * 1000).toISOString().substring(14, 19)}
+                         </div>
                        ))}
                      </div>
-                     
+
                      {/* Playhead */}
                      <div 
-                       className="absolute top-0 bottom-0 w-0.5 bg-white z-50 pointer-events-none shadow-[0_0_10px_rgba(255,255,255,0.8)] transition-all duration-75"
+                       className="absolute top-0 bottom-0 w-[1px] bg-red-500 z-50 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-all duration-75"
                        style={{ left: `${(currentTime / duration) * 100}%` }}
                      >
-                       <div className="absolute -top-1 -left-1.5 w-3.5 h-3.5 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,1)]"></div>
+                       <div className="absolute top-0 -left-1.5 w-3 h-3 bg-red-500 rounded-sm shadow-[0_0_10px_rgba(239,68,68,1)] flex items-center justify-center">
+                         <div className="w-0.5 h-1.5 bg-white/50 rounded-full" />
+                       </div>
                      </div>
 
                      {/* Overlay Blocks (Top Track) */}
@@ -747,7 +753,7 @@ export default function Home() {
                        return (
                          <div
                            key={ov.id}
-                           className={`absolute top-2 h-10 rounded border flex items-center px-1 overflow-hidden transition-all ${isActive ? 'bg-blue-600 border-sky-400 z-40' : 'bg-blue-900/80 border-blue-500/50 z-30'}`}
+                           className={`absolute top-6 h-10 rounded-md border flex items-center px-1 overflow-hidden transition-all shadow-sm ${isActive ? 'bg-[#0ea5e9]/20 border-[#0ea5e9] z-40' : 'bg-[#0ea5e9]/10 border-[#0ea5e9]/30 hover:border-[#0ea5e9]/50 z-30'}`}
                            style={{ 
                              left: `${startPct}%`, 
                              width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`,
@@ -769,7 +775,7 @@ export default function Home() {
                            return (
                               <div 
                                 key={`${i}-${wIndex}`}
-                                className={`absolute top-14 bottom-4 rounded-xl flex items-center justify-center transition-all ${isActive ? 'bg-[#ffe534] shadow-[0_0_15px_rgba(255,229,52,0.4)] z-40 scale-110' : 'bg-[#ffe534]/90 hover:bg-[#ffe534] z-30'}`}
+                                className={`absolute top-20 bottom-2 rounded-lg flex items-center justify-center transition-all border shadow-sm ${isActive ? 'bg-[#ffe534]/90 border-white/50 shadow-[0_0_15px_rgba(255,229,52,0.3)] z-40 scale-[1.02]' : 'bg-[#ffe534]/70 border-white/10 hover:bg-[#ffe534]/80 hover:border-white/30 z-30'}`}
                                 style={{ 
                                   left: `${startPct}%`, 
                                   width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`, // min width 20px
@@ -783,7 +789,7 @@ export default function Home() {
                                   </>
                                 )}
                                 <input 
-                                  className="bg-transparent text-black font-semibold text-center w-full focus:outline-none focus:bg-white/40 rounded px-0.5 text-xs sm:text-sm selection:bg-[#0ea5e9]/20"
+                                  className="bg-transparent text-black font-semibold text-center w-full h-full focus:outline-none focus:bg-white/50 rounded-md px-1 text-xs sm:text-sm selection:bg-[#0ea5e9]/30 transition-colors"
                                   value={w.word}
                                   onChange={(e) => {
                                       const newSegments = [...segments];
@@ -808,28 +814,28 @@ export default function Home() {
         {/* Right Column: Controls */}
         <div className="lg:col-span-4 flex flex-col gap-4 h-full min-h-0">
           {/* Tabs Navigation */}
-          <div className="flex bg-black/20 border border-white/5 rounded-2xl p-1.5 gap-1 shadow-2xl backdrop-blur-3xl overflow-x-auto custom-scrollbar relative z-10">
+          <div className="flex bg-player-bg border border-border-color rounded-2xl p-1 gap-1 shadow-inner relative z-10 w-full mb-1">
             <button 
               onClick={() => setActiveTab('generation')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'generation' ? 'bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'generation' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
               <Wand2 className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_generation}</span>
             </button>
             <button 
               onClick={() => setActiveTab('styling')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'styling' ? 'bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'styling' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
               <Settings className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_styling}</span>
             </button>
             <button 
               onClick={() => setActiveTab('editor')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'editor' ? 'bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'editor' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
               <Type className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_editor}</span>
             </button>
             <button 
               onClick={() => setActiveTab('overlays')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'overlays' ? 'bg-gradient-to-r from-[#0ea5e9] to-[#2563eb] text-white shadow-[0_4px_12px_rgba(0,87,255,0.3)] border border-white/5 scale-100' : 'text-text-secondary hover:text-white hover:bg-white/5 scale-95 hover:scale-100'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'overlays' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
               <UploadCloud className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_overlays}</span>
             </button>
@@ -844,7 +850,7 @@ export default function Home() {
                   <select 
                     value={language} 
                     onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0ea5e9] transition-colors cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent transition-all cursor-pointer appearance-none shadow-sm"
                   >
                     <option value="auto">{t.auto_detect}</option>
                     <option value="uk">{t.ukrainian}</option>
@@ -858,7 +864,7 @@ export default function Home() {
                   <select 
                     value={modelSize} 
                     onChange={(e) => setModelSize(e.target.value)}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0ea5e9] transition-colors cursor-pointer appearance-none"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent transition-all cursor-pointer appearance-none shadow-sm"
                   >
                     <option value="small">{t.level_low}</option>
                     <option value="medium">{t.level_medium}</option>
@@ -887,7 +893,7 @@ export default function Home() {
                   value={prompt} 
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder={t.placeholder}
-                  className="w-full bg-player-bg border border-white/10 rounded-lg p-3 text-text-primary focus:outline-none focus:border-[#0ea5e9] transition-colors h-20 resize-none text-sm custom-scrollbar"
+                  className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent transition-all h-20 resize-none text-sm custom-scrollbar shadow-sm"
                 />
               </div>
 
@@ -942,7 +948,7 @@ export default function Home() {
                     <select 
                       value={styles.font_name}
                       onChange={(e) => setStyles({...styles, font_name: e.target.value})}
-                      className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#0ea5e9] cursor-pointer appearance-none transition-colors"
+                      className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent cursor-pointer appearance-none transition-all shadow-sm"
                     >
                       <option value="Arial">Arial</option>
                       <option value="Impact">Impact</option>
@@ -966,7 +972,7 @@ export default function Home() {
                       else if (val === "Middle") setStyles({...styles, position: val, pos_y: 50});
                       else if (val === "Top") setStyles({...styles, position: val, pos_y: 10});
                     }}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#0ea5e9] cursor-pointer appearance-none transition-colors"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent cursor-pointer appearance-none transition-all shadow-sm"
                   >
                     <option value="Bottom">{t.bottom}</option>
                     <option value="Middle">{t.middle}</option>
@@ -982,7 +988,7 @@ export default function Home() {
                   <select 
                     value={styles.effect}
                     onChange={(e) => setStyles({...styles, effect: e.target.value})}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#0ea5e9] cursor-pointer appearance-none transition-colors"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent cursor-pointer appearance-none transition-all shadow-sm"
                   >
                     <option value="karaoke">{t.effect_karaoke}</option>
                     <option value="highlight">{t.effect_highlight}</option>
@@ -994,7 +1000,7 @@ export default function Home() {
                   <select 
                     value={styles.animation_style}
                     onChange={(e) => setStyles({...styles, animation_style: e.target.value})}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#0ea5e9] cursor-pointer appearance-none transition-colors"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent cursor-pointer appearance-none transition-all shadow-sm"
                   >
                     <option value="smooth">Smooth (Pop-up)</option>
                     <option value="pop">Dynamic (Spring/Pop)</option>
@@ -1006,7 +1012,7 @@ export default function Home() {
                   <select 
                     value={styles.aspect_ratio}
                     onChange={(e) => setStyles({...styles, aspect_ratio: e.target.value})}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-[#0ea5e9] cursor-pointer appearance-none transition-colors"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent cursor-pointer appearance-none transition-all shadow-sm"
                   >
                     <option value="original">Original</option>
                     <option value="9:16">9:16 (TikTok)</option>
@@ -1032,7 +1038,7 @@ export default function Home() {
                     type="number" min="1" max="15"
                     value={styles.words_per_line}
                     onChange={(e) => setStyles({...styles, words_per_line: parseInt(e.target.value)})}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent transition-all shadow-sm"
                   />
                 </div>
                 <div>
@@ -1041,7 +1047,7 @@ export default function Home() {
                     type="number" min="1" max="5"
                     value={styles.max_lines}
                     onChange={(e) => setStyles({...styles, max_lines: parseInt(e.target.value)})}
-                    className="w-full bg-player-bg border border-white/10 rounded-lg p-2.5 text-text-primary focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent transition-all shadow-sm"
                   />
                 </div>
               </div>

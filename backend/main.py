@@ -477,7 +477,12 @@ async def export_video(req: ExportRequest):
     
     inputs = ["-i", video_path]
     filter_chains = []
-    last_v = "0:v"
+    
+    if crop_filter:
+        filter_chains.append(f"[0:v]{crop_filter}[v_crop]")
+        last_v = "v_crop"
+    else:
+        last_v = "0:v"
     
     for i, ov in enumerate(req.overlays):
         overlay_path = None
@@ -498,14 +503,6 @@ async def export_video(req: ExportRequest):
     # ASS filter uses fontconfig or fontsdir. We can supply fontsdir to FFmpeg ASS filter.
     abs_fonts_dir = os.path.abspath(UPLOAD_DIR).replace("\\", "/")
     abs_fonts_dir = abs_fonts_dir.replace(":", "\\:")
-    
-    if crop_filter:
-        filter_chains.insert(0, f"[0:v]{crop_filter}[v_crop]")
-        # Replace 0:v with v_crop in overlays
-        if not req.overlays:
-            last_v = "v_crop"
-        else:
-            filter_chains[1] = filter_chains[1].replace("[0:v]", "[v_crop]")
             
     filter_chains.append(f"[{last_v}]ass='{abs_ass_path}':fontsdir='{abs_fonts_dir}',format=yuv420p,pad=ceil(iw/2)*2:ceil(ih/2)*2[outv]")
     filter_complex = ";".join(filter_chains)

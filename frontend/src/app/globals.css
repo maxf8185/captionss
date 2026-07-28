@@ -4,30 +4,30 @@
 
 :root {
   /* Light theme variables */
-  --bg-main: #f8fafc;
+  --bg-main: #f1f5f9;
   --bg-card: #ffffff;
   --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --border-color: rgba(0, 0, 0, 0.1);
-  --glass-bg: rgba(255, 255, 255, 0.8);
+  --text-secondary: #475569;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.85);
   --scrollbar-track: rgba(0, 0, 0, 0.05);
   --scrollbar-thumb: rgba(0, 0, 0, 0.2);
-  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.35);
   --player-bg: #e2e8f0;
 }
 
 .dark {
-  /* Dark theme variables */
-  --bg-main: #020817;
-  --bg-card: rgba(255, 255, 255, 0.05);
-  --text-primary: #ffffff;
+  /* Dark theme variables - Deep charcoal / sleek modern look */
+  --bg-main: #0B0F19;
+  --bg-card: rgba(20, 25, 35, 0.6);
+  --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --glass-bg: rgba(0, 0, 0, 0.4);
-  --scrollbar-track: rgba(255, 255, 255, 0.05);
-  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
-  --player-bg: rgba(0, 0, 0, 0.2);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(11, 15, 25, 0.7);
+  --scrollbar-track: rgba(255, 255, 255, 0.03);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
+  --player-bg: rgba(0, 0, 0, 0.3);
 }
 
 @theme inline {
@@ -43,26 +43,31 @@
 
 body {
   background-color: var(--bg-main);
-  background-image: radial-gradient(circle at top right, rgba(14, 165, 233, 0.1), transparent 40%),
+  background-image: radial-gradient(circle at top right, rgba(14, 165, 233, 0.15), transparent 40%),
                     radial-gradient(circle at bottom left, rgba(37, 99, 235, 0.1), transparent 40%);
   background-attachment: fixed;
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.4s ease, color 0.4s ease;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
+  height: 8px;
+  width: 8px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 10px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
 }
+
