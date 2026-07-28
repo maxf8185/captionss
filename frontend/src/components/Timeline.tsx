@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import WaveSurfer from 'wavesurfer.js';
 import { usePlayerStore } from '../store/playerStore';
 
 export default function Timeline() {
@@ -10,6 +11,28 @@ export default function Timeline() {
   const overlays = usePlayerStore(state => state.overlays);
   const videoRef = usePlayerStore(state => state.videoRef);
   const setSegments = usePlayerStore(state => state.setSegments);
+
+  const waveformRef = useRef<HTMLDivElement>(null);
+  const wavesurfer = useRef<WaveSurfer | null>(null);
+
+  useEffect(() => {
+    if (!waveformRef.current || !videoRef?.current) return;
+
+    wavesurfer.current = WaveSurfer.create({
+      container: waveformRef.current,
+      media: videoRef.current,
+      waveColor: 'rgba(255, 255, 255, 0.2)',
+      progressColor: 'rgba(14, 165, 233, 0.5)',
+      height: 158, // Match timeline height roughly
+      normalize: true,
+      minPxPerSec: 150,
+      interact: false, // Timeline handles interaction
+    });
+
+    return () => {
+      wavesurfer.current?.destroy();
+    };
+  }, [videoRef]);
 
   return (
     <div 
@@ -24,6 +47,13 @@ export default function Timeline() {
       }}
     >
       <div className="relative h-full" style={{ width: `${Math.max(800, duration * 150)}px` }}>
+        {/* Waveform Background */}
+        <div 
+          ref={waveformRef} 
+          className="absolute top-0 left-0 right-0 h-full pointer-events-none opacity-60 z-0" 
+          style={{ width: '100%' }}
+        />
+
         {/* Time Ruler */}
         <div className="absolute top-0 left-0 bottom-0 pointer-events-none z-10 flex">
           {Array.from({ length: Math.ceil(duration) }).map((_, i) => (

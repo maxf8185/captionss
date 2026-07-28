@@ -5,14 +5,14 @@ import { translations, Language } from "./translations";
 import { usePlayerStore, Overlay } from "../store/playerStore";
 import Timeline from "../components/Timeline";
 import SubtitleOverlay from "../components/SubtitleOverlay";
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [segments, setSegments] = useState<any[]>([]);
-  const [language, setLanguage] = useState("auto");
+    const [language, setLanguage] = useState("auto");
   const [modelSize, setModelSize] = useState("large"); // default to large for better accuracy
   const [aiTask, setAiTask] = useState("transcribe"); // transcribe or translate
 
@@ -42,8 +42,6 @@ export default function Home() {
     } else {
       document.documentElement.classList.remove("dark");
     }
-  }, [theme]);
-
   }, [theme]);
 
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -234,8 +232,8 @@ export default function Home() {
       setOverlays([...overlays, {
         id: data.overlay_id,
         url: data.url,
-        start: currentTime,
-        end: Math.min(currentTime + 3, duration)
+        start: usePlayerStore.getState().currentTime,
+        end: Math.min(usePlayerStore.getState().currentTime + 3, usePlayerStore.getState().duration)
       }]);
     } catch (err) {
       console.error(err);
@@ -354,7 +352,7 @@ export default function Home() {
   };
 
   const shiftTime = (amount: number) => {
-    setSegments(segs => segs.map(s => ({
+    setSegments(segments.map((s: any) => ({
       ...s,
       start: Math.max(0, s.start + amount),
       end: Math.max(0, s.end + amount),
@@ -441,11 +439,6 @@ export default function Home() {
     }
   };
 
-  // Find active segment and words based on current time
-  const activeSegment = segments.find(
-    (s) => currentTime >= s.start && currentTime <= s.end
-  );
-
   if (showSplash) {
     return (
       <div className="min-h-screen bg-[#020817] flex flex-col items-center justify-center transition-opacity duration-500">
@@ -498,7 +491,13 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-64px)]">
+      <main className="max-w-[100vw] w-full mx-auto px-4 py-4 h-[calc(100vh-64px)]">
+        <PanelGroup orientation="horizontal" className="h-full w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+          {/* Center Column: Player & Timeline */}
+          <Panel defaultSize={70} minSize={40} className="flex flex-col bg-bg-card">
+            <PanelGroup orientation="vertical">
+              {/* Top: Video Player */}
+              <Panel defaultSize={70} minSize={30} className="flex flex-col p-4 relative min-h-0">
         
         {/* Error Banner */}
         {errorMsg && (
@@ -508,9 +507,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* Left Column: Player */}
-        <div className="lg:col-span-8 flex flex-col gap-4 w-full h-full min-h-0 overflow-hidden">
-          <div className="flex-1 flex justify-center items-center w-full bg-black/20 rounded-3xl p-2 sm:p-4 min-h-0">
+        
+          <div className="flex-1 flex justify-center items-center w-full bg-black/40 rounded-3xl p-2 sm:p-4 min-h-0 relative">
             <div 
               className={`relative bg-black rounded-2xl border border-white/5 overflow-hidden shadow-2xl group backdrop-blur-md transition-all duration-300 ${!videoUrl ? 'aspect-video w-full max-h-full' : ''}`}
               style={videoAspect ? { aspectRatio: videoAspect, maxHeight: '100%', maxWidth: '100%' } : {}}
@@ -560,33 +558,43 @@ export default function Home() {
                     setIsDraggingText={setIsDraggingText} 
                     setStyles={setStyles} 
                   />
-
-              </>
-            )}
-          </div>
-        </div>
-
-           {/* Editable Timeline Placeholder */}
-          {videoUrl && (
-            <div className="bg-bg-card border border-white/10 rounded-xl p-3 flex flex-col gap-2 overflow-hidden shadow-2xl relative shrink-0 w-full">
-               {segments.length === 0 ? (
-                 <div className="text-text-secondary text-sm flex items-center gap-2 h-16 w-full justify-center border border-dashed border-white/10 rounded-lg">
-                   {t.timeline_placeholder}
-                 </div>
-               ) : (
-                 <>
-                 <div className="flex items-center gap-2 px-2 overflow-x-auto custom-scrollbar pb-1">
-                 </>
-               )}
+                </>
+              )}
             </div>
+          </div>
+        </Panel>
+          
+          {videoUrl && (
+            <>
+              <PanelResizeHandle className="h-2 w-full bg-white/5 hover:bg-[#0ea5e9]/50 transition-colors cursor-row-resize relative">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-1 rounded-full bg-white/20" />
+              </PanelResizeHandle>
+              
+              {/* Bottom: Timeline */}
+              <Panel defaultSize={30} minSize={15} className="flex flex-col border-t border-white/5 bg-black/20 p-2">
+                <div className="flex flex-col gap-2 overflow-hidden h-full">
+                  {segments.length === 0 ? (
+                    <div className="text-text-secondary text-sm flex items-center gap-2 h-full w-full justify-center border border-dashed border-white/10 rounded-lg">
+                      {t.timeline_placeholder}
+                    </div>
+                  ) : (
+                    <Timeline />
+                  )}
+                </div>
+              </Panel>
+            </>
           )}
+        </PanelGroup>
+      </Panel>
 
+      <PanelResizeHandle className="w-2 h-full bg-white/5 hover:bg-[#0ea5e9]/50 transition-colors cursor-col-resize relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-1 rounded-full bg-white/20" />
+      </PanelResizeHandle>
 
-        </div>
-
-        {/* Right Column: Controls */}
-        <div className="lg:col-span-4 flex flex-col gap-4 h-full min-h-0">
-          {/* Tabs Navigation */}
+      {/* Right Column: Controls */}
+      <Panel defaultSize={30} minSize={20} className="flex flex-col bg-bg-main border-l border-white/5">
+        <div className="flex flex-col gap-4 h-full p-4 overflow-y-auto custom-scrollbar">
+            {/* Tabs Navigation */}
           <div className="flex bg-player-bg border border-border-color rounded-2xl p-1 gap-1 shadow-inner relative z-10 w-full mb-1">
             <button 
               onClick={() => setActiveTab('generation')}
@@ -755,21 +763,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm text-text-secondary mb-2 block">{t.anim_effect}</label>
-                  <select 
-                    value={styles.effect}
-                    onChange={(e) => setStyles({...styles, effect: e.target.value})}
-                    className="w-full bg-player-bg border border-border-color rounded-lg p-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent cursor-pointer appearance-none transition-all shadow-sm"
-                  >
-                    <option value="karaoke">{t.effect_karaoke}</option>
-                    <option value="highlight">{t.effect_highlight}</option>
-                    <option value="reveal">{t.effect_reveal}</option>
-                  </select>
-                </div>
-
-                <div>
+              <div className="grid grid-cols-2 gap-4">                <div>
                   <label className="text-sm text-text-secondary mb-2 block">Aspect Ratio</label>
                   <select 
                     value={styles.aspect_ratio}
@@ -974,7 +968,7 @@ export default function Home() {
                             <div className="flex items-center justify-between gap-2">
                               <label className="text-xs text-text-secondary">{t.start}</label>
                               <input 
-                                type="number" step="0.1" min="0" max={duration}
+                                type="number" step="0.1" min="0" max={usePlayerStore.getState().duration}
                                 value={ov.start.toFixed(1)}
                                 onChange={(e) => {
                                   const newOvs = [...overlays];
@@ -987,11 +981,11 @@ export default function Home() {
                             <div className="flex items-center justify-between gap-2">
                               <label className="text-xs text-text-secondary">{t.end}</label>
                               <input 
-                                type="number" step="0.1" min="0" max={duration}
+                                type="number" step="0.1" min="0" max={usePlayerStore.getState().duration}
                                 value={ov.end.toFixed(1)}
                                 onChange={(e) => {
                                   const newOvs = [...overlays];
-                                  newOvs[i].end = parseFloat(e.target.value) || duration;
+                                  newOvs[i].end = parseFloat(e.target.value) || usePlayerStore.getState().duration;
                                   setOverlays(newOvs);
                                 }}
                                 className="bg-bg-card border border-white/10 rounded px-2 py-1 text-xs w-16 text-center text-text-primary focus:outline-none focus:border-blue-500"
@@ -1013,7 +1007,9 @@ export default function Home() {
             )}
           </div>
 
-        </div>
+          </div>
+          </Panel>
+        </PanelGroup>
       </main>
     </div>
   );

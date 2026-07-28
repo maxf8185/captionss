@@ -1,6 +1,14 @@
 import os
 import shutil
 import uuid
+
+def is_valid_uuid(val):
+    try:
+        uuid.UUID(str(val))
+        return True
+    except ValueError:
+        return False
+
 import json
 import subprocess
 import re
@@ -26,7 +34,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -154,6 +162,31 @@ def get_video_dimensions(video_path: str, ffmpeg_exe: str):
     except Exception as e:
         print(f"Error getting dimensions: {e}")
     return 1920, 1080
+
+async def get_hardware_encoder(ffmpeg_exe: str) -> str:
+    """Detects available hardware encoders in FFmpeg for 10x faster export."""
+    try:
+        creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+        process = await asyncio.create_subprocess_exec(
+            ffmpeg_exe, "-encoders",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            creationflags=creation_flags
+        )
+        stdout, _ = await process.communicate()
+        output = stdout.decode(errors="ignore")
+        
+        if "h264_nvenc" in output:
+            return "h264_nvenc"
+        elif "h264_amf" in output:
+            return "h264_amf"
+        elif "h264_qsv" in output:
+            return "h264_qsv"
+        elif "h264_videotoolbox" in output:
+            return "h264_videotoolbox"
+    except Exception:
+        pass
+    return "libx264"
 
 class WordTimestamps(BaseModel):
     word: str
@@ -440,6 +473,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
 @app.post("/api/export")
 async def export_video(req: ExportRequest):
+    if not is_valid_uuid(req.video_id):
+        raise HTTPException(status_code=400, detail="Invalid video ID")
     video_path = None
     for file in os.listdir(UPLOAD_DIR):
         if file.startswith(req.video_id):
@@ -511,10 +546,12 @@ async def export_video(req: ExportRequest):
     filter_chains.append(f"[{last_v}]ass='{abs_ass_path}':fontsdir='{abs_fonts_dir}',format=yuv420p,pad=ceil(iw/2)*2:ceil(ih/2)*2[outv]")
     filter_complex = ";".join(filter_chains)
     
+    encoder = await get_hardware_encoder(ffmpeg_exe)
+    
     cmd = [ffmpeg_exe, "-y"] + inputs + [
         "-filter_complex", filter_complex,
         "-map", "[outv]", "-map", "0:a?",
-        "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+        "-c:v", encoder, "-crf", "18", "-preset", "fast" if encoder == "libx264" else "p4",
         "-c:a", "copy",
         out_video_path
     ]
