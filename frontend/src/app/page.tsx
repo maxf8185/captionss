@@ -12,6 +12,8 @@ export default function Home() {
   const [videoId, setVideoId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRemovingSilence, setIsRemovingSilence] = useState(false);
+
     const [language, setLanguage] = useState("auto");
   const [modelSize, setModelSize] = useState("large"); // default to large for better accuracy
   const [aiTask, setAiTask] = useState("transcribe"); // transcribe or translate
@@ -167,6 +169,32 @@ export default function Home() {
     } catch (err) {
       console.error(err);
       setErrorMsg("Помилка завантаження. Переконайтеся, що backend запущено.");
+    }
+  };
+
+  
+  const handleRemoveSilence = async () => {
+    if (!videoId || segments.length === 0) return;
+    setIsRemovingSilence(true);
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/remove_silence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_id: videoId, segments, threshold: 0.8 }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setVideoId(data.video_id);
+        setVideoUrl(data.url);
+        setSegments(data.segments);
+      } else {
+        alert('Failed to remove silences');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error connecting to backend');
+    } finally {
+      setIsRemovingSilence(false);
     }
   };
 
