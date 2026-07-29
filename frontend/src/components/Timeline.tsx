@@ -35,17 +35,35 @@ export default function Timeline() {
   }, [videoRef]);
 
   return (
-    <div 
-      ref={timelineRef}
-      className="relative h-40 overflow-x-auto overflow-y-hidden rounded-lg bg-black cursor-pointer custom-scrollbar border border-white/5"
-      onClick={(e) => {
-        if (!timelineRef.current || !videoRef?.current) return;
-        const rect = timelineRef.current.getBoundingClientRect();
-        const clickX = e.clientX - rect.left + timelineRef.current.scrollLeft;
-        const newTime = (clickX / (duration * 150)) * duration;
-        videoRef.current.currentTime = newTime;
-      }}
-    >
+    
+    <div className="relative border border-white/5 rounded-lg flex bg-black h-40 overflow-hidden">
+      {/* Sticky Track Labels */}
+      <div className="w-24 shrink-0 bg-[#0a0a0a] border-r border-white/10 z-[60] flex flex-col relative shadow-[5px_0_15px_rgba(0,0,0,0.5)]">
+        <div className="h-5 w-full text-[9px] text-white/30 flex items-center px-2 font-mono border-b border-white/5">TRACKS</div>
+        <div className="absolute top-5 h-10 w-full flex items-center px-2 text-[10px] text-white/70 font-semibold bg-white/5 border-l-[3px] border-[#0ea5e9] hover:bg-white/10 transition-colors cursor-default">
+          🌅 V1 Media
+        </div>
+        <div className="absolute top-[76px] h-9 w-full flex items-center px-2 text-[10px] text-black font-bold bg-[#ffe534]/90 border-l-[3px] border-white shadow-[0_0_10px_rgba(255,229,52,0.3)] hover:brightness-110 transition-all cursor-default">
+          📝 T1 Text
+        </div>
+        <div className="absolute bottom-0 h-8 w-full flex items-center px-2 text-[10px] text-white/50 font-semibold bg-white/5 border-l-[3px] border-purple-500 cursor-default">
+          🎵 A1 Audio
+        </div>
+      </div>
+      
+      {/* Scrollable Timeline Area */}
+
+      <div 
+        ref={timelineRef}
+        className="flex-1 overflow-x-auto overflow-y-hidden relative custom-scrollbar cursor-crosshair"
+        onClick={(e) => {
+          if (!timelineRef.current || !videoRef?.current) return;
+          const rect = timelineRef.current.getBoundingClientRect();
+          const clickX = e.clientX - rect.left + timelineRef.current.scrollLeft;
+          const newTime = (clickX / (duration * 150)) * duration;
+          videoRef.current.currentTime = newTime;
+        }}
+      >
       <div className="relative h-full" style={{ width: `${Math.max(800, duration * 150)}px` }}>
         {/* Waveform Background */}
         <div 
@@ -130,6 +148,7 @@ export default function Timeline() {
           })
         ))}
       </div>
+    </div>
     </div>
   );
 }
