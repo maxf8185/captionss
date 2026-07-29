@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { temporal } from 'zundo';
 
 export interface Overlay {
   id: string;
@@ -27,7 +28,8 @@ interface PlayerState {
   setVideoRef: (ref: React.RefObject<HTMLVideoElement | null>) => void;
 }
 
-export const usePlayerStore = create<PlayerState>((set) => ({
+export const usePlayerStore = create<PlayerState>()(temporal((set) => ({
+
   currentTime: 0,
   isPlaying: false,
   duration: 1,
@@ -45,4 +47,4 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   setThumbnails: (thumbnails) => set({ thumbnails: thumbnails }),
   setVideoAspect: (aspect) => set({ videoAspect: aspect }),
   setVideoRef: (ref) => set({ videoRef: ref }),
-}));
+}), { partialize: (state) => ({ segments: state.segments, overlays: state.overlays }) }));
