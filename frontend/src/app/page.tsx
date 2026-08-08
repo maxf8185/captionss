@@ -8,6 +8,17 @@ import Timeline from "../components/Timeline";
 import SubtitleOverlay from "../components/SubtitleOverlay";
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
@@ -34,6 +45,7 @@ export default function Home() {
   const [isDraggingText, setIsDraggingText] = useState(false);
   
   const [customFonts, setCustomFonts] = useState<string[]>([]);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 1500);
@@ -531,11 +543,11 @@ export default function Home() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#0ea5e9]/15 via-bg-main to-bg-main -z-10" />
       
       <header className="border-b border-white/10 bg-glass-bg backdrop-blur-2xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="AutoCaps" className="h-8 object-contain rounded-xl overflow-hidden" onError={(e) => { e.currentTarget.style.display='none' }} />
             <div className="flex items-center gap-2">
-              <h1 className="font-bold text-2xl tracking-tight hidden sm:block">Auto<span className="text-[#0ea5e9]">Caps</span></h1>
+              <h1 className="font-bold text-xl sm:text-2xl tracking-tight hidden sm:block">Auto<span className="text-[#0ea5e9]">Caps</span></h1>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -571,10 +583,10 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-[100vw] w-full mx-auto px-4 py-4 h-[calc(100vh-64px)]">
-        <PanelGroup orientation="horizontal" className="h-full w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+      <main className="max-w-[100vw] w-full mx-auto px-2 sm:px-4 py-4 h-[calc(100vh-64px)]">
+        <PanelGroup orientation={isMobile ? "vertical" : "horizontal"} className="h-full w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
           {/* Center Column: Player & Timeline */}
-          <Panel defaultSize={70} minSize={40} className="flex flex-col bg-bg-card">
+          <Panel defaultSize={isMobile ? 50 : 70} minSize={isMobile ? 30 : 40} className="flex flex-col bg-bg-card">
             <PanelGroup orientation="vertical">
               {/* Top: Video Player */}
               <Panel defaultSize={70} minSize={30} className="flex flex-col p-4 relative min-h-0">
@@ -667,38 +679,38 @@ export default function Home() {
         </PanelGroup>
       </Panel>
 
-      <PanelResizeHandle className="w-2 h-full bg-white/5 hover:bg-[#0ea5e9]/50 transition-colors cursor-col-resize relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-1 rounded-full bg-white/20" />
+      <PanelResizeHandle className={`w-full h-2 lg:w-2 lg:h-full bg-white/5 hover:bg-[#0ea5e9]/50 transition-colors ${isMobile ? 'cursor-row-resize' : 'cursor-col-resize'} relative`}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-1 w-8 lg:h-8 lg:w-1 rounded-full bg-white/20" />
       </PanelResizeHandle>
 
       {/* Right Column: Controls */}
       <Panel defaultSize={30} minSize={20} className="flex flex-col bg-bg-main border-l border-white/5">
         <div className="flex flex-col gap-4 h-full p-4 overflow-y-auto custom-scrollbar">
             {/* Tabs Navigation */}
-          <div className="flex bg-player-bg border border-border-color rounded-2xl p-1 gap-1 shadow-inner relative z-10 w-full mb-1">
+          <div className="flex bg-player-bg border border-border-color rounded-2xl p-1 gap-1 shadow-inner relative z-10 w-full mb-1 flex-wrap lg:flex-nowrap">
             <button 
               onClick={() => setActiveTab('generation')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'generation' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
+              className={`flex-1 min-w-[45%] flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'generation' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
-              <Wand2 className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_generation}</span>
+              <Wand2 className="w-4 h-4" /> <span className="inline">{t.tab_generation}</span>
             </button>
             <button 
               onClick={() => setActiveTab('styling')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'styling' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
+              className={`flex-1 min-w-[45%] flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'styling' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
-              <Settings className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_styling}</span>
+              <Settings className="w-4 h-4" /> <span className="inline">{t.tab_styling}</span>
             </button>
             <button 
               onClick={() => setActiveTab('editor')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'editor' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
+              className={`flex-1 min-w-[45%] flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'editor' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
-              <Type className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_editor}</span>
+              <Type className="w-4 h-4" /> <span className="inline">{t.tab_editor}</span>
             </button>
             <button 
               onClick={() => setActiveTab('overlays')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'overlays' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
+              className={`flex-1 min-w-[45%] flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${activeTab === 'overlays' ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
             >
-              <UploadCloud className="w-4 h-4" /> <span className="hidden sm:inline">{t.tab_overlays}</span>
+              <UploadCloud className="w-4 h-4" /> <span className="inline">{t.tab_overlays}</span>
             </button>
           </div>
 
