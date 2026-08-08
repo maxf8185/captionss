@@ -39,5 +39,5 @@ RUN mkdir -p /root/AutoCapsData && chmod 777 /root/AutoCapsData
 ENV HOST="0.0.0.0"
 ENV PORT="7860"
 
-# Start the application
-CMD ["bash", "-c", "cd backend && uvicorn main:app --host 0.0.0.0 --port 7860"]
+# Start both FastAPI (backend) and Next.js (frontend)
+CMD ["bash", "-c", "cd backend && uvicorn main:app --host 127.0.0.1 --port 7860 & cd frontend && npm run start -- -p ${PORT:-3000} -H 0.0.0.0"]

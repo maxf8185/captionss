@@ -1,11 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',
-  // Next.js doesn't support Image Optimization API in export mode unless configured
+  // Remove output: 'export' to support Clerk and Server Actions
   images: {
     unoptimized: true,
-  }
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://127.0.0.1:7860/api/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

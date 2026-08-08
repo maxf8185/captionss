@@ -1104,7 +1104,7 @@ export default function Home() {
         <div className="flex justify-center mt-6 text-sm text-text-secondary pb-4">
           Знайшли баг або є пропозиції? Напишіть нам: <a href="mailto:priezvieskomeno@gmail.com" className="ml-1 text-sky-500 hover:underline">priezvieskomeno@gmail.com</a>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
