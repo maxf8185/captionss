@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { UploadCloud, Video, Settings, Wand2, Download, Palette, Type, AlignCenter, Moon, Sun, Globe, Trash2 } from "lucide-react";
+import { useAuth, UserButton } from "@clerk/nextjs";
 import { translations, Language } from "./translations";
 import { usePlayerStore, Overlay } from "../store/playerStore";
 import Timeline from "../components/Timeline";
@@ -23,6 +24,7 @@ export default function Home() {
   const [theme, setTheme] = useState<"light"|"dark">("dark");
   const [activeTab, setActiveTab] = useState<"generation" | "styling" | "editor" | "overlays">("generation");
   const [generateProgress, setGenerateProgress] = useState<number>(0);
+  const { userId } = useAuth();
 
   const [prompt, setPrompt] = useState("");
   const setVideoRef = usePlayerStore(state => state.setVideoRef);
@@ -254,7 +256,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ video_id: videoId, language, prompt, model_size: modelSize, task: aiTask }),
+        body: JSON.stringify({ video_id: videoId, language, prompt, model_size: modelSize, task: aiTask, user_id: userId }),
       });
       if (!res.ok) throw new Error("Generation failed");
       if (!res.body) throw new Error("No response body");
@@ -486,7 +488,8 @@ export default function Home() {
           segments,
           styles,
           save_path: savePath,
-          overlays
+          overlays,
+          user_id: userId
         })
       });
       const data = await res.json();
@@ -535,19 +538,21 @@ export default function Home() {
               <h1 className="font-bold text-2xl tracking-tight hidden sm:block">Auto<span className="text-[#0ea5e9]">Caps</span></h1>
             </div>
           </div>
-          <div className="flex gap-4 items-center">
-            <button 
+          <div className="flex items-center gap-4">
+            <button
               onClick={() => setAppLang(appLang === "uk" ? "en" : "uk")}
-              className="flex items-center gap-2 text-sm font-medium hover:text-[#0ea5e9] transition-colors"
+              className="p-2 rounded-lg bg-bg-secondary text-text-secondary hover:text-text-primary transition-colors flex items-center gap-2 text-sm font-medium border border-border/30 hover:border-border"
             >
-              <Globe className="w-4 h-4" /> {appLang.toUpperCase()}
+              <Globe className="w-4 h-4" />
+              {appLang === "uk" ? "EN" : "UK"}
             </button>
-            <button 
+            <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-2 text-sm font-medium hover:text-[#0ea5e9] transition-colors"
+              className="p-2 rounded-lg bg-bg-secondary text-text-secondary hover:text-text-primary transition-colors flex items-center gap-2 text-sm font-medium border border-border/30 hover:border-border"
             >
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
+            <UserButton />
             {videoUrl && (
               <label className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full font-medium transition-all cursor-pointer shadow-[0_0_15px_rgba(37,99,235,0.4)]">
                 <UploadCloud className="w-4 h-4" /> {t.upload_video}
@@ -1095,7 +1100,11 @@ export default function Home() {
           </div>
           </Panel>
         </PanelGroup>
-      </main>
-    </div>
+        
+        <div className="flex justify-center mt-6 text-sm text-text-secondary pb-4">
+          Знайшли баг або є пропозиції? Напишіть нам: <a href="mailto:priezvieskomeno@gmail.com" className="ml-1 text-sky-500 hover:underline">priezvieskomeno@gmail.com</a>
+        </div>
+      </div>
+    </main>
   );
 }

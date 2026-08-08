@@ -23,9 +23,44 @@ from typing import List, Optional
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from groq import Groq
+import sqlite3
 
 load_dotenv()
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+# Initialize SQLite for user limits
+db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "limits.db")
+def init_db():
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS usage 
+                 (user_id TEXT, timestamp REAL)''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+def check_user_limit(user_id: str) -> bool:
+    if not user_id:
+        return False # No limit if no user ID (or you can block them)
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    # Delete old records
+    cutoff = time.time() - 24 * 3600
+    c.execute("DELETE FROM usage WHERE timestamp < ?", (cutoff,))
+    
+    c.execute("SELECT COUNT(*) FROM usage WHERE user_id = ?", (user_id,))
+    count = c.fetchone()[0]
+    
+    if count >= 5:
+        conn.close()
+        return False
+    
+    c.execute("INSERT INTO usage (user_id, timestamp) VALUES (?, ?)", (user_id, time.time()))
+    conn.commit()
+    conn.close()
+    return True
 import imageio_ffmpeg
 import cv2
 try:
@@ -195,6 +230,7 @@ class GenerateRequest(BaseModel):
     prompt: str = ""
     model_size: str = "base"
     task: str = "transcribe"
+    user_id: Optional[str] = None
 
 class StyleOptions(BaseModel):
     font_name: str = "Arial"
@@ -229,6 +265,7 @@ class ExportRequest(BaseModel):
     styles: StyleOptions
     save_path: Optional[str] = None
     overlays: List[OverlayConfig] = []
+    user_id: Optional[str] = None
 
 @app.post("/api/upload")
 async def upload_video(file: UploadFile = File(...)):
@@ -281,6 +318,11 @@ async def generate_subtitles(req: GenerateRequest):
         raise HTTPException(status_code=404, detail="Video not found")
         
     async def event_generator():
+        if req.user_id:
+            if not check_user_limit(req.user_id):
+                yield json.dumps({"error": "Ліміт вичерпано. Ви можете згенерувати лише 5 відео на день. Спробуйте завтра!"}) + "\n"
+                return
+        
         yield json.dumps({"progress": 1}) + "\n"
         await asyncio.sleep(0.1)
         
