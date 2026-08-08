@@ -1,9 +1,8 @@
 fastapi
 uvicorn
 python-multipart
-faster-whisper
-ffmpeg-python
-pysrt
+groq
+python-dotenv
 pywebview
 mediapipe
 opencv-python-headless

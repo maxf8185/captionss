@@ -722,8 +722,10 @@ export default function Home() {
                     onChange={(e) => setModelSize(e.target.value)}
                     className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent transition-all cursor-pointer appearance-none shadow-sm"
                   >
+                    <option value="base">Найшвидший (Base)</option>
                     <option value="small">{t.level_low}</option>
                     <option value="medium">{t.level_medium}</option>
+                    <option value="large-v3">Найточніший (Large-v3)</option>
                   </select>
                 </div>
               </div>

@@ -16,12 +16,16 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from faster_whisper import WhisperModel
 import asyncio
 import sys
 import time
 from typing import List, Optional
 from pydantic import BaseModel
+from dotenv import load_dotenv
+from groq import Groq
+
+load_dotenv()
+groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 import imageio_ffmpeg
 import cv2
 try:
@@ -89,22 +93,7 @@ async def startup_event():
 if os.path.exists(FRONTEND_DIR):
     app.mount("/_next", StaticFiles(directory=os.path.join(FRONTEND_DIR, "_next")), name="next_assets")
     
-model = None
-current_model_size = None
-
-def get_model(model_size="base"):
-    global model, current_model_size
-    if model is None or current_model_size != model_size:
-        print(f"Loading Whisper Model ({model_size})...")
-        try:
-            model = WhisperModel(model_size, device="cuda", compute_type="float16")
-            print("Model loaded with CUDA acceleration.")
-        except Exception as e:
-            print(f"CUDA failed or not available ({e}). Falling back to CPU.")
-            model = WhisperModel(model_size, device="cpu", compute_type="int8")
-            print("Model loaded on CPU.")
-        current_model_size = model_size
-    return model
+# Removed get_model function
 
 def get_ffmpeg_path():
     return imageio_ffmpeg.get_ffmpeg_exe()
@@ -291,57 +280,108 @@ async def generate_subtitles(req: GenerateRequest):
     if not video_path:
         raise HTTPException(status_code=404, detail="Video not found")
         
-    whisper_model = await asyncio.to_thread(get_model, req.model_size)
-    ffmpeg_exe = get_ffmpeg_path()
-    
-    audio_path = os.path.join(UPLOAD_DIR, f"{req.video_id}.wav")
-    creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
-    process = await asyncio.create_subprocess_exec(
-        ffmpeg_exe, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_path,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        creationflags=creation_flags
-    )
-    await process.communicate()
-    if process.returncode != 0:
-        raise HTTPException(status_code=500, detail="Failed to extract audio")
-
-    lang = req.language if req.language != 'auto' else None
-    initial_prompt = req.prompt if req.prompt and len(req.prompt.strip()) > 0 else None
-    
-    if lang == 'uk' and not initial_prompt:
-        initial_prompt = "Привіт! Це текст українською мовою, з правильною граматикою та пунктуацією."
-        
-    segments_generator, info = whisper_model.transcribe(audio_path, language=lang, task=req.task, word_timestamps=True, initial_prompt=initial_prompt, beam_size=5)
-    
     async def event_generator():
-        result_segments = []
-        seg_id = 1
-        total_duration = info.duration
-        for segment in segments_generator:
-            words = []
-            for word in segment.words:
-                words.append({
-                    "word": word.word,
-                    "start": word.start,
-                    "end": word.end
-                })
-            result_segments.append({
-                "id": seg_id,
-                "start": segment.start,
-                "end": segment.end,
-                "text": segment.text,
-                "words": words
-            })
-            seg_id += 1
-            progress = min(100, int((segment.end / total_duration) * 100)) if total_duration > 0 else 0
-            yield json.dumps({"progress": progress}) + "\n"
-            await asyncio.sleep(0.01)
+        yield json.dumps({"progress": 1}) + "\n"
+        await asyncio.sleep(0.1)
+        
+        # We use Groq now, no need to load local model
+        yield json.dumps({"progress": 5}) + "\n"
+        
+        # Extract audio
+        ffmpeg_exe = get_ffmpeg_path()
+        audio_path = os.path.join(UPLOAD_DIR, f"{req.video_id}.wav")
+        creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+        process = await asyncio.create_subprocess_exec(
+            ffmpeg_exe, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            creationflags=creation_flags
+        )
+        await process.communicate()
+        if process.returncode != 0:
+            yield json.dumps({"error": "Failed to extract audio"}) + "\n"
+            return
             
+        yield json.dumps({"progress": 15}) + "\n"
+        
+        # Transcribe with Groq API
+        lang = req.language if req.language != 'auto' else None
+        initial_prompt = req.prompt if req.prompt and len(req.prompt.strip()) > 0 else None
+        
+        if lang == 'uk' and not initial_prompt:
+            initial_prompt = "Привіт! Це текст українською мовою, з правильною граматикою та пунктуацією."
+            
+        yield json.dumps({"progress": 20}) + "\n"
+        
+        def transcribe_with_groq():
+            with open(audio_path, "rb") as file:
+                # Use large-v3 for Groq as it's insanely fast anyway
+                transcription = groq_client.audio.transcriptions.create(
+                    file=("audio.wav", file.read()),
+                    model="whisper-large-v3",
+                    prompt=initial_prompt,
+                    language=lang,
+                    response_format="verbose_json",
+                    timestamp_granularities=["word"]
+                )
+            return transcription
+
+        try:
+            yield json.dumps({"progress": 40}) + "\n"
+            transcription = await asyncio.to_thread(transcribe_with_groq)
+            yield json.dumps({"progress": 95}) + "\n"
+        except Exception as e:
+            yield json.dumps({"error": f"Groq API Error: {str(e)}"}) + "\n"
+            if os.path.exists(audio_path):
+                os.remove(audio_path)
+            return
+
+        result_segments = []
+        
+        # Groq returns transcription.words which we need to group into sensible segments.
+        # Since Groq might not return perfectly sized segments like faster-whisper, 
+        # we can reconstruct segments from words or use transcription.segments if available.
+        
+        if hasattr(transcription, "segments") and transcription.segments:
+            for i, segment in enumerate(transcription.segments):
+                # segment['words'] might not exist on the segment itself in Groq,
+                # we need to find words that fall into this segment from transcription.words
+                seg_words = [
+                    {"word": w["word"], "start": w["start"], "end": w["end"]} 
+                    for w in getattr(transcription, "words", []) 
+                    if w["start"] >= segment["start"] and w["end"] <= segment["end"] + 0.1
+                ]
+                result_segments.append({
+                    "id": i + 1,
+                    "start": segment["start"],
+                    "end": segment["end"],
+                    "text": segment["text"],
+                    "words": seg_words
+                })
+        else:
+            # Fallback if no segments but words exist
+            words = getattr(transcription, "words", [])
+            if words:
+                # Just group all words into one big segment for now, or split by pauses > 1s
+                current_segment = {"id": 1, "start": words[0]["start"], "end": words[0]["end"], "text": "", "words": []}
+                seg_id = 1
+                for w in words:
+                    if w["start"] - current_segment["end"] > 1.0:
+                        # New segment
+                        result_segments.append(current_segment)
+                        seg_id += 1
+                        current_segment = {"id": seg_id, "start": w["start"], "end": w["end"], "text": "", "words": []}
+                    
+                    current_segment["words"].append({"word": w["word"], "start": w["start"], "end": w["end"]})
+                    current_segment["end"] = w["end"]
+                    current_segment["text"] += w["word"]
+                result_segments.append(current_segment)
+
         if os.path.exists(audio_path):
             os.remove(audio_path)
             
-        yield json.dumps({"segments": result_segments, "detected_language": info.language, "progress": 100}) + "\n"
+        detected_language = getattr(transcription, "language", lang or "unknown")
+        yield json.dumps({"segments": result_segments, "detected_language": detected_language, "progress": 100}) + "\n"
         
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")
 
@@ -785,3 +825,17 @@ async def diarize_audio(req: SilenceRemoveRequest):
         print(f"Diarization error: {e}")
         
     return {"status": "success", "segments": req.segments}
+
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404)
+        
+    path = os.path.join(FRONTEND_DIR, full_path)
+    if os.path.isfile(path):
+        return FileResponse(path)
+        
+    index_path = os.path.join(FRONTEND_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return HTMLResponse("<h1>Frontend not built or found</h1>", status_code=404)
