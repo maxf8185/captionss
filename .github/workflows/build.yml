@@ -25,8 +25,11 @@ jobs:
         node-version: '20'
         
     - name: Build Next.js Frontend
+      env:
+        DESKTOP_BUILD: 'true'
       run: |
         cd frontend
+        python patch_desktop.py
         npm install
         npm run build
         
@@ -80,8 +83,11 @@ jobs:
         node-version: '20'
         
     - name: Build Next.js Frontend
+      env:
+        DESKTOP_BUILD: 'true'
       run: |
         cd frontend
+        python patch_desktop.py
         npm install
         npm run build
         
