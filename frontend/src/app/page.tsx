@@ -288,6 +288,11 @@ export default function Home() {
           if (!line.trim()) continue;
           try {
             const data = JSON.parse(line);
+            if (data.error) {
+              setErrorMsg(data.error);
+              setIsGenerating(false);
+              return;
+            }
             if (data.progress !== undefined) {
               setGenerateProgress(data.progress);
             }
