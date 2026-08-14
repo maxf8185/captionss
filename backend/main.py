@@ -26,7 +26,7 @@ from groq import Groq
 import sqlite3
 
 load_dotenv()
-groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY", "missing_api_key"))
 
 # Initialize SQLite for user limits
 db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "limits.db")
