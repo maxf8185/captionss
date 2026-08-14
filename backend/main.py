@@ -25,6 +25,8 @@ from dotenv import load_dotenv
 from groq import Groq
 import sqlite3
 
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+load_dotenv(dotenv_path=env_path)
 load_dotenv()
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY", "missing_api_key"))
 
@@ -352,8 +354,12 @@ async def generate_subtitles(req: GenerateRequest):
         lang = req.language if req.language != 'auto' else None
         initial_prompt = req.prompt if req.prompt and len(req.prompt.strip()) > 0 else None
         
-        if lang == 'uk' and not initial_prompt:
-            initial_prompt = "Привіт! Це текст українською мовою, з правильною граматикою та пунктуацією."
+        if lang == 'uk':
+            uk_prompt = "Привіт! Це текст українською мовою, з правильною граматикою та пунктуацією."
+            if initial_prompt:
+                initial_prompt = f"{uk_prompt} Словник: {initial_prompt}"
+            else:
+                initial_prompt = uk_prompt
             
         yield json.dumps({"progress": 20}) + "\n"
         
