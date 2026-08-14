@@ -94,9 +94,11 @@ else:
 
 UPLOAD_DIR = os.path.join(USER_DATA_DIR, "uploads")
 OUTPUT_DIR = os.path.join(USER_DATA_DIR, "outputs")
+FONTS_DIR = os.path.join(USER_DATA_DIR, "fonts")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(FONTS_DIR, exist_ok=True)
 
 # Mount API static files
 app.mount("/api/static_uploads", StaticFiles(directory=UPLOAD_DIR), name="static_uploads")
@@ -107,7 +109,7 @@ async def cleanup_old_files():
         try:
             now = time.time()
             cutoff = now - 24 * 3600 # 24 hours
-            for directory in [UPLOAD_DIR, OUTPUT_DIR]:
+            for directory in [UPLOAD_DIR, OUTPUT_DIR, FONTS_DIR]:
                 if not os.path.exists(directory): continue
                 for filename in os.listdir(directory):
                     filepath = os.path.join(directory, filename)
@@ -294,7 +296,7 @@ async def upload_font(file: UploadFile = File(...)):
     font_id = str(uuid.uuid4())
     ext = file.filename.split(".")[-1]
     font_filename = f"font_{font_id}.{ext}"
-    file_path = os.path.join(UPLOAD_DIR, font_filename)
+    file_path = os.path.join(FONTS_DIR, font_filename)
     
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -637,7 +639,7 @@ async def export_video(req: ExportRequest):
     
     # Fonts dir config for custom fonts
     # ASS filter uses fontconfig or fontsdir. We can supply fontsdir to FFmpeg ASS filter.
-    abs_fonts_dir = os.path.abspath(UPLOAD_DIR).replace("\\", "/")
+    abs_fonts_dir = os.path.abspath(FONTS_DIR).replace("\\", "/")
     abs_fonts_dir = abs_fonts_dir.replace(":", "\\:")
             
     filter_chains.append(f"[{last_v}]ass='{abs_ass_path}':fontsdir='{abs_fonts_dir}',format=yuv420p,pad=ceil(iw/2)*2:ceil(ih/2)*2[outv]")
