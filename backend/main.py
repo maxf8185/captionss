@@ -322,10 +322,7 @@ async def generate_subtitles(req: GenerateRequest):
         raise HTTPException(status_code=404, detail="Video not found")
         
     async def event_generator():
-        if req.user_id:
-            if not check_user_limit(req.user_id):
-                yield json.dumps({"error": "Ліміт вичерпано. Ви можете згенерувати лише 5 відео на день. Спробуйте завтра!"}) + "\n"
-                return
+        # Limit check removed as requested
         
         yield json.dumps({"progress": 1}) + "\n"
         await asyncio.sleep(0.1)
@@ -365,10 +362,10 @@ async def generate_subtitles(req: GenerateRequest):
         
         def transcribe_with_groq():
             with open(audio_path, "rb") as file:
-                # Use large-v3 for Groq as it's insanely fast anyway
+                groq_model = req.model_size if req.model_size in ["whisper-large-v3", "whisper-large-v3-turbo"] else "whisper-large-v3"
                 transcription = groq_client.audio.transcriptions.create(
                     file=("audio.wav", file.read()),
-                    model="whisper-large-v3",
+                    model=groq_model,
                     prompt=initial_prompt,
                     language=lang,
                     response_format="verbose_json",
