@@ -448,12 +448,12 @@ export default function Home() {
   const shiftTime = (amount: number) => {
     setSegments(segments.map((s: any) => ({
       ...s,
-      start: Math.max(0, s.start + amount),
-      end: Math.max(0, s.end + amount),
+      start: Math.max(0, parseFloat((s.start + amount).toFixed(3))),
+      end: Math.max(0, parseFloat((s.end + amount).toFixed(3))),
       words: s.words?.map((w: any) => ({
         ...w,
-        start: Math.max(0, w.start + amount),
-        end: Math.max(0, w.end + amount)
+        start: Math.max(0, parseFloat((w.start + amount).toFixed(3))),
+        end: Math.max(0, parseFloat((w.end + amount).toFixed(3)))
       })) || []
     })));
   };

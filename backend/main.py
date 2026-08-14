@@ -111,7 +111,7 @@ async def cleanup_old_files():
         try:
             now = time.time()
             cutoff = now - 24 * 3600 # 24 hours
-            for directory in [UPLOAD_DIR, OUTPUT_DIR, FONTS_DIR]:
+            for directory in [UPLOAD_DIR, OUTPUT_DIR]:
                 if not os.path.exists(directory): continue
                 for filename in os.listdir(directory):
                     filepath = os.path.join(directory, filename)
@@ -169,11 +169,17 @@ def get_face_bboxes_for_segments(video_path: str, segments: List[dict]):
     avg_x = sum(face_x_centers) / len(face_x_centers) if face_x_centers else 0.5
     return face_bboxes, avg_x
 
-def get_video_dimensions(video_path: str, ffmpeg_exe: str):
+async def get_video_dimensions(video_path: str, ffmpeg_exe: str):
     try:
         creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
-        result = subprocess.run([ffmpeg_exe, "-i", video_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=creation_flags)
-        output = result.stderr
+        process = await asyncio.create_subprocess_exec(
+            ffmpeg_exe, "-i", video_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            creationflags=creation_flags
+        )
+        stdout, stderr = await process.communicate()
+        output = stderr.decode('utf-8', errors='ignore')
         
         match = re.search(r'Video:.*?\s(\d{3,4})x(\d{3,4})[\s,]', output)
         if match:
@@ -361,17 +367,78 @@ async def generate_subtitles(req: GenerateRequest):
         yield json.dumps({"progress": 20}) + "\n"
         
         def transcribe_with_groq():
-            with open(audio_path, "rb") as file:
-                groq_model = req.model_size if req.model_size in ["whisper-large-v3", "whisper-large-v3-turbo"] else "whisper-large-v3"
-                transcription = groq_client.audio.transcriptions.create(
-                    file=("audio.wav", file.read()),
-                    model=groq_model,
-                    prompt=initial_prompt,
-                    language=lang,
-                    response_format="verbose_json",
-                    timestamp_granularities=["word"]
-                )
-            return transcription
+            import wave
+            import math
+            import tempfile
+            groq_model = req.model_size if req.model_size in ["whisper-large-v3", "whisper-large-v3-turbo"] else "whisper-large-v3"
+            
+            with wave.open(audio_path, 'rb') as wav:
+                frames = wav.getnframes()
+                rate = wav.getframerate()
+                duration = frames / float(rate)
+                chunk_duration = 600 # 10 minutes
+                num_chunks = math.ceil(duration / chunk_duration)
+                
+                if num_chunks <= 1:
+                    with open(audio_path, "rb") as file:
+                        return groq_client.audio.transcriptions.create(
+                            file=("audio.wav", file.read()),
+                            model=groq_model,
+                            prompt=initial_prompt,
+                            language=lang,
+                            response_format="verbose_json",
+                            timestamp_granularities=["word"]
+                        )
+                
+                all_words = []
+                all_text = ""
+                
+                for i in range(num_chunks):
+                    wav.setpos(int(i * chunk_duration * rate))
+                    frames_to_read = min(int(chunk_duration * rate), frames - int(i * chunk_duration * rate))
+                    chunk_data = wav.readframes(frames_to_read)
+                    
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav:
+                        pass
+                    
+                    try:
+                        with wave.open(temp_wav.name, 'wb') as temp_wav_file:
+                            temp_wav_file.setnchannels(wav.getnchannels())
+                            temp_wav_file.setsampwidth(wav.getsampwidth())
+                            temp_wav_file.setframerate(rate)
+                            temp_wav_file.writeframes(chunk_data)
+                        
+                        with open(temp_wav.name, 'rb') as f:
+                            chunk_trans = groq_client.audio.transcriptions.create(
+                                file=("audio.wav", f.read()),
+                                model=groq_model,
+                                prompt=initial_prompt,
+                                language=lang,
+                                response_format="verbose_json",
+                                timestamp_granularities=["word"]
+                            )
+                        
+                        offset = i * chunk_duration
+                        words = getattr(chunk_trans, "words", [])
+                        for w in words:
+                            if isinstance(w, dict):
+                                w["start"] += offset
+                                w["end"] += offset
+                                all_words.append(w)
+                            else:
+                                w.start += offset
+                                w.end += offset
+                                all_words.append(w)
+                        all_text += getattr(chunk_trans, "text", "") + " "
+                    finally:
+                        if os.path.exists(temp_wav.name):
+                            os.remove(temp_wav.name)
+                            
+                class DummyTranscription:
+                    def __init__(self, text, words):
+                        self.text = text
+                        self.words = words
+                return DummyTranscription(all_text, all_words)
 
         try:
             yield json.dumps({"progress": 40}) + "\n"
@@ -379,9 +446,13 @@ async def generate_subtitles(req: GenerateRequest):
             yield json.dumps({"progress": 95}) + "\n"
         except Exception as e:
             yield json.dumps({"error": f"Groq API Error: {str(e)}"}) + "\n"
-            if os.path.exists(audio_path):
-                os.remove(audio_path)
             return
+        finally:
+            if os.path.exists(audio_path):
+                try:
+                    os.remove(audio_path)
+                except:
+                    pass
 
         result_segments = []
         
@@ -424,8 +495,7 @@ async def generate_subtitles(req: GenerateRequest):
                     current_segment["text"] += w["word"]
                 result_segments.append(current_segment)
 
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
+
             
         detected_language = getattr(transcription, "language", lang or "unknown")
         yield json.dumps({"segments": result_segments, "detected_language": detected_language, "progress": 100}) + "\n"
@@ -545,7 +615,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 for i, line in enumerate(screen):
                     for word in line:
                         dur_cs = int((word['end'] - word['start']) * 100)
-                        text_karaoke += f"{{\\K{dur_cs}}}{word['word']} "
+                        safe_word = word['word'].replace('{', '｛').replace('}', '｝')
+                        text_karaoke += f"{{\\K{dur_cs}}}{safe_word} "
                     if i < len(screen) - 1:
                         text_karaoke = text_karaoke.strip() + "\\N"
                 ass_content += f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{pos_tag}{text_karaoke.strip()}\n"
@@ -559,13 +630,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     for i_line, line in enumerate(screen):
                         line_str = ""
                         for w in line:
+                            safe_word = w['word'].replace('{', '｛').replace('}', '｝')
                             if w == active_w:
                                 # Professional Subme-style clean highlight without any scale bump
-                                line_str += f"{{\\alpha&H00&\\c{highlight}}}{w['word']}{{\\c{primary}\\alpha&H60&}} "
+                                line_str += f"{{\\alpha&H00&\\c{highlight}}}{safe_word}{{\\c{primary}\\alpha&H60&}} "
                             elif styles.effect == "reveal" and w['start'] > active_w['start']:
-                                line_str += f"{{\\alpha&HFF&}}{w['word']}{{\\alpha&H60&}} "
+                                line_str += f"{{\\alpha&HFF&}}{safe_word}{{\\alpha&H60&}} "
                             else:
-                                line_str += f"{w['word']} "
+                                line_str += f"{safe_word} "
                         text_layer += line_str.strip() + "\\N"
                     
                     ass_content += f"Dialogue: 0,{w_start},{w_end},Default,,0,0,0,,{pos_tag}{text_layer.strip()}\n"
@@ -587,7 +659,7 @@ async def export_video(req: ExportRequest):
         raise HTTPException(status_code=404, detail="Video not found")
         
     ffmpeg_exe = get_ffmpeg_path()
-    video_width, video_height = get_video_dimensions(video_path, ffmpeg_exe)
+    video_width, video_height = await get_video_dimensions(video_path, ffmpeg_exe)
     
     crop_filter = ""
     segments_dicts = [s.dict() for s in req.segments]
@@ -608,7 +680,7 @@ async def export_video(req: ExportRequest):
             crop_filter = f"crop={target_width}:{video_height}:{target_x}:0"
             video_width = target_width
         
-    ass_path = os.path.join(OUTPUT_DIR, f"{req.video_id}.ass")
+    ass_path = os.path.join(OUTPUT_DIR, f"{req.video_id}_{uuid.uuid4().hex}.ass")
     generate_ass_file(segments_dicts, req.styles, ass_path, video_width, video_height, face_bboxes)
     
     out_video_path = req.save_path if req.save_path else os.path.join(OUTPUT_DIR, f"{req.video_id}_final.mp4")
