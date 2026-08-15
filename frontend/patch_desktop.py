@@ -26,7 +26,7 @@ def patch_next_config():
     with open(path, "r", encoding="utf-8") as f:
         content = f.read()
     # add output: 'export',
-    content = content.replace("const nextConfig: NextConfig = {", "const nextConfig: NextConfig = {\n  output: 'export',")
+    content = content.replace("const nextConfig = {", "const nextConfig = {\n  output: 'export',")
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
