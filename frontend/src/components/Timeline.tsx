@@ -1,16 +1,108 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { usePlayerStore } from '../store/playerStore';
+
+function Playhead({ duration }: { duration: number }) {
+  const currentTime = usePlayerStore(state => state.currentTime);
+  return (
+    <div 
+      className="absolute top-0 bottom-0 w-[1px] bg-red-500 z-50 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-all duration-75"
+      style={{ left: `${(currentTime / duration) * 100}%` }}
+    >
+      <div className="absolute top-0 -left-1.5 w-3 h-3 bg-red-500 rounded-sm shadow-[0_0_10px_rgba(239,68,68,1)] flex items-center justify-center">
+        <div className="w-0.5 h-1.5 bg-white/50 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+function OverlayBlock({ ov, duration }: { ov: any, duration: number }) {
+  const isActive = usePlayerStore(state => state.currentTime >= ov.start && state.currentTime <= ov.end);
+  const startPct = (ov.start / duration) * 100;
+  const widthPct = ((ov.end - ov.start) / duration) * 100;
+  
+  return (
+    <div
+      className={`absolute top-6 h-10 rounded-md border flex items-center px-1 overflow-hidden transition-all shadow-sm ${isActive ? 'bg-[#0ea5e9]/20 border-[#0ea5e9] z-40' : 'bg-[#0ea5e9]/10 border-[#0ea5e9]/30 hover:border-[#0ea5e9]/50 z-30'}`}
+      style={{ 
+        left: `${startPct}%`, 
+        width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`,
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <img src={ov.url} className="h-full w-full object-cover opacity-80 pointer-events-none" alt="" />
+    </div>
+  );
+}
+
+function WordInput({ w, i, wIndex, duration }: { w: any, i: number, wIndex: number, duration: number }) {
+  const isActive = usePlayerStore(state => state.currentTime >= w.start && state.currentTime <= w.end);
+  const [localWord, setLocalWord] = useState(w.word);
+  
+  // Sync if external changes (e.g. undo/redo)
+  useEffect(() => {
+    setLocalWord(w.word);
+  }, [w.word]);
+  
+  const startPct = (w.start / duration) * 100;
+  const widthPct = ((w.end - w.start) / duration) * 100;
+  
+  const commitChange = () => {
+    if (localWord === w.word) return; // No change
+    
+    // Always use FRESH state to avoid React stale closure
+    const currentSegments = usePlayerStore.getState().segments;
+    const newSegments = [...currentSegments];
+    const seg = { ...newSegments[i] };
+    const newWords = [...seg.words];
+    
+    newWords[wIndex] = { ...newWords[wIndex], word: localWord };
+    const newText = newWords.map(wordObj => wordObj.word).join(" ");
+    
+    seg.words = newWords;
+    seg.text = newText;
+    newSegments[i] = seg;
+    
+    usePlayerStore.getState().setSegments(newSegments);
+  };
+  
+  return (
+    <div 
+      className={`absolute top-20 bottom-2 rounded-lg flex items-center justify-center transition-all border shadow-sm ${isActive ? 'bg-[#ffe534]/90 border-white/50 shadow-[0_0_15px_rgba(255,229,52,0.3)] z-40 scale-[1.02]' : 'bg-[#ffe534]/70 border-white/10 hover:bg-[#ffe534]/80 hover:border-white/30 z-30'}`}
+      style={{ 
+        left: `${startPct}%`, 
+        width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`,
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {isActive && (
+        <>
+          <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#2563eb]" />
+          <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#2563eb]" />
+        </>
+      )}
+      <input 
+        className="bg-transparent text-black font-semibold text-center w-full h-full focus:outline-none focus:bg-white/50 rounded-md px-1 text-xs sm:text-sm selection:bg-[#0ea5e9]/30 transition-colors"
+        value={localWord}
+        onChange={(e) => setLocalWord(e.target.value)}
+        onBlur={commitChange}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.currentTarget.blur();
+          }
+        }}
+      />
+    </div>
+  );
+}
 
 export default function Timeline() {
   const timelineRef = useRef<HTMLDivElement>(null);
   
-  const currentTime = usePlayerStore(state => state.currentTime);
   const duration = usePlayerStore(state => state.duration);
   const segments = usePlayerStore(state => state.segments);
   const overlays = usePlayerStore(state => state.overlays);
   const videoRef = usePlayerStore(state => state.videoRef);
-  const setSegments = usePlayerStore(state => state.setSegments);
 
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -82,70 +174,18 @@ export default function Timeline() {
         </div>
 
         {/* Playhead */}
-        <div 
-          className="absolute top-0 bottom-0 w-[1px] bg-red-500 z-50 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-all duration-75"
-          style={{ left: `${(currentTime / duration) * 100}%` }}
-        >
-          <div className="absolute top-0 -left-1.5 w-3 h-3 bg-red-500 rounded-sm shadow-[0_0_10px_rgba(239,68,68,1)] flex items-center justify-center">
-            <div className="w-0.5 h-1.5 bg-white/50 rounded-full" />
-          </div>
-        </div>
+        <Playhead duration={duration} />
 
         {/* Overlay Blocks (Top Track) */}
-        {overlays.map((ov) => {
-          const startPct = (ov.start / duration) * 100;
-          const widthPct = ((ov.end - ov.start) / duration) * 100;
-          const isActive = currentTime >= ov.start && currentTime <= ov.end;
-          return (
-            <div
-              key={ov.id}
-              className={`absolute top-6 h-10 rounded-md border flex items-center px-1 overflow-hidden transition-all shadow-sm ${isActive ? 'bg-[#0ea5e9]/20 border-[#0ea5e9] z-40' : 'bg-[#0ea5e9]/10 border-[#0ea5e9]/30 hover:border-[#0ea5e9]/50 z-30'}`}
-              style={{ 
-                left: `${startPct}%`, 
-                width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img src={ov.url} className="h-full w-full object-cover opacity-80 pointer-events-none" alt="" />
-            </div>
-          );
-        })}
+        {overlays.map((ov) => (
+          <OverlayBlock key={ov.id} ov={ov} duration={duration} />
+        ))}
 
         {/* Words Blocks (Bottom Track) */}
         {segments.map((s, i) => (
-          s.words.map((w: any, wIndex: number) => {
-              const startPct = (w.start / duration) * 100;
-              const widthPct = ((w.end - w.start) / duration) * 100;
-              const isActive = currentTime >= w.start && currentTime <= w.end;
-              
-              return (
-                <div 
-                  key={`${i}-${wIndex}`}
-                  className={`absolute top-20 bottom-2 rounded-lg flex items-center justify-center transition-all border shadow-sm ${isActive ? 'bg-[#ffe534]/90 border-white/50 shadow-[0_0_15px_rgba(255,229,52,0.3)] z-40 scale-[1.02]' : 'bg-[#ffe534]/70 border-white/10 hover:bg-[#ffe534]/80 hover:border-white/30 z-30'}`}
-                  style={{ 
-                    left: `${startPct}%`, 
-                    width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`, // min width 20px
-                  }}
-                  onClick={(e) => e.stopPropagation()} // prevent seeking on edit
-                >
-                  {isActive && (
-                    <>
-                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#2563eb]" />
-                      <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#2563eb]" />
-                    </>
-                  )}
-                  <input 
-                    className="bg-transparent text-black font-semibold text-center w-full h-full focus:outline-none focus:bg-white/50 rounded-md px-1 text-xs sm:text-sm selection:bg-[#0ea5e9]/30 transition-colors"
-                    value={w.word}
-                    onChange={(e) => {
-                        const newSegments = [...segments];
-                        newSegments[i].words[wIndex].word = e.target.value;
-                        setSegments(newSegments);
-                    }}
-                  />
-                </div>
-              )
-          })
+          s.words.map((w: any, wIndex: number) => (
+             <WordInput key={`${i}-${wIndex}`} w={w} i={i} wIndex={wIndex} duration={duration} />
+          ))
         ))}
       </div>
     </div>

@@ -190,6 +190,19 @@ export default function Home() {
     generate().catch(console.error);
   }, [videoUrl]);
 
+  // Ping backend to keep session alive
+  useEffect(() => {
+    if (!videoId) return;
+    const intervalId = setInterval(() => {
+      fetch("/api/ping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_id: videoId })
+      }).catch(console.error);
+    }, 5 * 60 * 1000); // Every 5 minutes
+    return () => clearInterval(intervalId);
+  }, [videoId]);
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMsg(null);
     if (!e.target.files?.[0]) return;
@@ -468,8 +481,8 @@ export default function Home() {
       id: Date.now(),
       start: start,
       end: end,
-      text: "",
-      words: []
+      text: "New text",
+      words: [{ word: "New", start: start, end: start + 1 }, { word: "text", start: start + 1, end: end }]
     });
     setSegments(newSegs);
   };
@@ -1008,7 +1021,18 @@ export default function Home() {
                               value={seg.start.toFixed(1)} 
                               onChange={(e) => {
                                 const newSegs = [...segments];
-                                newSegs[idx].start = parseFloat(e.target.value) || 0;
+                                const newStart = parseFloat(e.target.value) || 0;
+                                const delta = newStart - newSegs[idx].start;
+                                newSegs[idx] = {
+                                  ...newSegs[idx],
+                                  start: newStart,
+                                  end: newSegs[idx].end + delta,
+                                  words: newSegs[idx].words?.map((w: any) => ({
+                                    ...w,
+                                    start: w.start + delta,
+                                    end: w.end + delta
+                                  })) || []
+                                };
                                 setSegments(newSegs);
                               }}
                               className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#2563eb] outline-none text-right font-mono" 
@@ -1019,7 +1043,18 @@ export default function Home() {
                               value={seg.end.toFixed(1)} 
                               onChange={(e) => {
                                 const newSegs = [...segments];
-                                newSegs[idx].end = parseFloat(e.target.value) || 0;
+                                const newEnd = parseFloat(e.target.value) || 0;
+                                const delta = newEnd - newSegs[idx].end;
+                                newSegs[idx] = {
+                                  ...newSegs[idx],
+                                  end: newEnd,
+                                  words: newSegs[idx].words?.map((w: any, wIdx: number, arr: any[]) => {
+                                    if (wIdx === arr.length - 1) {
+                                      return { ...w, end: w.end + delta };
+                                    }
+                                    return w;
+                                  }) || []
+                                };
                                 setSegments(newSegs);
                               }}
                               className="w-12 bg-transparent text-xs text-text-secondary focus:text-[#2563eb] outline-none text-left font-mono" 
@@ -1038,7 +1073,23 @@ export default function Home() {
                       value={seg.text}
                       onChange={(e) => {
                         const newSegs = [...segments];
-                        newSegs[idx].text = e.target.value;
+                        const newText = e.target.value;
+                        
+                        const wordsArr = newText.trim().split(/\s+/).filter(Boolean);
+                        const duration = seg.end - seg.start;
+                        const wordDuration = wordsArr.length > 0 ? duration / wordsArr.length : duration;
+                        
+                        const newWords = wordsArr.map((w: any, wIdx: number) => ({
+                           word: w,
+                           start: seg.start + (wIdx * wordDuration),
+                           end: seg.start + ((wIdx + 1) * wordDuration)
+                        }));
+
+                        newSegs[idx] = {
+                          ...newSegs[idx],
+                          text: newText,
+                          words: newWords.length > 0 ? newWords : [{ word: newText, start: seg.start, end: seg.end }]
+                        };
                         setSegments(newSegs);
                       }}
                       className="w-full bg-transparent text-text-primary text-sm focus:outline-none resize-none leading-relaxed"

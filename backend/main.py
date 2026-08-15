@@ -155,8 +155,7 @@ def get_face_bboxes_for_segments(video_path: str, segments: List[dict]):
             start_time = seg.get('start', 0)
             end_time = seg.get('end', 0)
             mid_time = (start_time + end_time) / 2
-            frame_idx = int(mid_time * fps)
-            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+            cap.set(cv2.CAP_PROP_POS_MSEC, mid_time * 1000)
             success, image = cap.read()
             if success:
                 image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -284,7 +283,7 @@ async def upload_video(file: UploadFile = File(...)):
     file_path = os.path.join(UPLOAD_DIR, f"{video_id}.{ext}")
     
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        await asyncio.to_thread(shutil.copyfileobj, file.file, buffer)
         
     return {"video_id": video_id, "filename": file.filename, "url": f"/api/static_uploads/{video_id}.{ext}"}
 
@@ -295,7 +294,7 @@ async def upload_overlay(file: UploadFile = File(...)):
     file_path = os.path.join(UPLOAD_DIR, f"overlay_{overlay_id}.{ext}")
     
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        await asyncio.to_thread(shutil.copyfileobj, file.file, buffer)
         
     return {"overlay_id": f"overlay_{overlay_id}", "url": f"/api/static_uploads/overlay_{overlay_id}.{ext}"}
 
@@ -307,7 +306,7 @@ async def upload_font(file: UploadFile = File(...)):
     file_path = os.path.join(FONTS_DIR, font_filename)
     
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        await asyncio.to_thread(shutil.copyfileobj, file.file, buffer)
         
     # Register font so FFmpeg can use it without system installation?
     # FFmpeg can use fonts via a directory if we set fonts_dir or just pass fontconfig,
@@ -338,7 +337,7 @@ async def generate_subtitles(req: GenerateRequest):
         
         # Extract audio
         ffmpeg_exe = get_ffmpeg_path()
-        audio_path = os.path.join(UPLOAD_DIR, f"{req.video_id}.wav")
+        audio_path = os.path.join(UPLOAD_DIR, f"{req.video_id}_{uuid.uuid4().hex[:8]}.wav")
         creation_flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
         process = await asyncio.create_subprocess_exec(
             ffmpeg_exe, "-y", "-i", video_path, "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", audio_path,
@@ -546,12 +545,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         h = int(seconds / 3600)
         m = int((seconds % 3600) / 60)
         s = int(seconds % 60)
-        cs = int((seconds * 100) % 100)
+        cs = int(round((seconds - int(seconds)) * 100))
         return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
 
     for seg_idx, seg in enumerate(segments):
         words = seg.get('words', [])
-        if not words:
+        # If words is empty but text exists, fallback by creating a fake word taking the whole segment time
+        if not words and seg.get('text'):
+            words = [{"word": seg['text'], "start": seg.get('start', 0), "end": seg.get('end', 2)}]
+        elif not words:
             continue
             
         screens = []
@@ -609,19 +611,20 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             if not screen or not screen[0]: continue
             
             if styles.effect == "legacy_karaoke":
-                start_time = format_time(screen[0][0]['start'])
-                end_time = format_time(screen[-1][-1]['end'])
+                start_time = format_time(screen[0][0]['start']) if screen[0] else "0:00:00.00"
+                end_time = format_time(screen[-1][-1]['end']) if screen[-1] else "0:00:00.00"
                 text_karaoke = ""
                 for i, line in enumerate(screen):
                     for word in line:
                         dur_cs = int((word['end'] - word['start']) * 100)
-                        safe_word = word['word'].replace('{', '｛').replace('}', '｝')
+                        safe_word = word['word'].replace('{', '｛').replace('}', '｝').replace('\n', '\\N')
                         text_karaoke += f"{{\\K{dur_cs}}}{safe_word} "
                     if i < len(screen) - 1:
                         text_karaoke = text_karaoke.strip() + "\\N"
                 ass_content += f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{pos_tag}{text_karaoke.strip()}\n"
             else:
                 words_in_screen = [w for line in screen for w in line]
+                if not words_in_screen: continue
                 for i, active_w in enumerate(words_in_screen):
                     w_start = format_time(active_w['start'])
                     w_end = format_time(words_in_screen[i+1]['start']) if i + 1 < len(words_in_screen) else format_time(active_w['end'])
@@ -630,7 +633,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     for i_line, line in enumerate(screen):
                         line_str = ""
                         for w in line:
-                            safe_word = w['word'].replace('{', '｛').replace('}', '｝')
+                            safe_word = w['word'].replace('{', '｛').replace('}', '｝').replace('\n', '\\N')
                             if w == active_w:
                                 # Professional Subme-style clean highlight without any scale bump
                                 line_str += f"{{\\alpha&H00&\\c{highlight}}}{safe_word}{{\\c{primary}\\alpha&H60&}} "
@@ -683,10 +686,13 @@ async def export_video(req: ExportRequest):
     ass_path = os.path.join(OUTPUT_DIR, f"{req.video_id}_{uuid.uuid4().hex}.ass")
     generate_ass_file(segments_dicts, req.styles, ass_path, video_width, video_height, face_bboxes)
     
-    out_video_path = req.save_path if req.save_path else os.path.join(OUTPUT_DIR, f"{req.video_id}_final.mp4")
+    if req.save_path:
+        out_video_path = req.save_path
+    else:
+        out_video_path = os.path.join(OUTPUT_DIR, f"{req.video_id}_{uuid.uuid4().hex[:8]}_final.mp4")
     
     abs_ass_path = os.path.abspath(ass_path).replace("\\", "/")
-    abs_ass_path = abs_ass_path.replace(":", "\\:")
+    abs_ass_path = abs_ass_path.replace(":", "\\:").replace("'", "\\'")
     
     inputs = ["-i", video_path]
     filter_chains = []
@@ -715,7 +721,7 @@ async def export_video(req: ExportRequest):
     # Fonts dir config for custom fonts
     # ASS filter uses fontconfig or fontsdir. We can supply fontsdir to FFmpeg ASS filter.
     abs_fonts_dir = os.path.abspath(FONTS_DIR).replace("\\", "/")
-    abs_fonts_dir = abs_fonts_dir.replace(":", "\\:")
+    abs_fonts_dir = abs_fonts_dir.replace(":", "\\:").replace("'", "\\'")
             
     filter_chains.append(f"[{last_v}]ass='{abs_ass_path}':fontsdir='{abs_fonts_dir}',format=yuv420p,pad=ceil(iw/2)*2:ceil(ih/2)*2[outv]")
     filter_complex = ";".join(filter_chains)
@@ -746,7 +752,7 @@ async def export_video(req: ExportRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error exporting video: {str(e)}")
         
-    return {"status": "success", "url": None if req.save_path else f"/api/static_outputs/{req.video_id}_final.mp4"}
+    return {"status": "success", "url": f"/api/static_outputs/{os.path.basename(out_video_path)}"}
 
 # Serve Frontend HTML
 @app.get("/{full_path:path}")
@@ -869,9 +875,14 @@ async def remove_silence(req: SilenceRemoveRequest):
     
     encoder = await get_hardware_encoder(ffmpeg_exe)
     
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt', encoding='utf-8') as f:
+        f.write("".join(filter_complex))
+        filter_file = f.name
+        
     cmd = [
         ffmpeg_exe, "-y", "-i", video_path,
-        "-filter_complex", "".join(filter_complex),
+        "-filter_complex_script", filter_file,
         "-map", "[outv]", "-map", "[outa]",
         "-c:v", encoder, "-crf", "18", "-preset", "fast" if encoder == "libx264" else "p4",
         out_video_path
@@ -886,6 +897,9 @@ async def remove_silence(req: SilenceRemoveRequest):
     )
     stdout, stderr = await process.communicate()
     
+    if os.path.exists(filter_file):
+        os.remove(filter_file)
+        
     if process.returncode != 0:
         raise HTTPException(status_code=500, detail=f"FFmpeg error: {stderr.decode(errors='ignore')}")
         
@@ -945,12 +959,33 @@ async def diarize_audio(req: SilenceRemoveRequest):
         
     return {"status": "success", "segments": req.segments}
 
+class PingRequest(BaseModel):
+    video_id: str
+
+@app.post("/api/ping")
+async def ping_video(req: PingRequest):
+    if not is_valid_uuid(req.video_id):
+        return {"status": "ignored"}
+        
+    for directory in [UPLOAD_DIR, OUTPUT_DIR]:
+        if os.path.exists(directory):
+            for file in os.listdir(directory):
+                if file.startswith(req.video_id):
+                    filepath = os.path.join(directory, file)
+                    if os.path.isfile(filepath):
+                        # Update access and modification times to now
+                        os.utime(filepath, None)
+    return {"status": "success"}
+
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404)
         
-    path = os.path.join(FRONTEND_DIR, full_path)
+    path = os.path.abspath(os.path.join(FRONTEND_DIR, full_path))
+    if not path.startswith(os.path.abspath(FRONTEND_DIR)):
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
     if os.path.isfile(path):
         return FileResponse(path)
         
