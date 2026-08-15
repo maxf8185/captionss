@@ -48,7 +48,7 @@ jobs:
     - name: Build Executable with PyInstaller
       run: |
         cd backend
-        pyinstaller --noconfirm --onedir --windowed --icon=logo.ico --add-data "../frontend/out;frontend/out" --collect-all faster_whisper --collect-all ctranslate2 --collect-all imageio_ffmpeg --collect-all uvicorn --collect-all fastapi --name "AutoCaps" desktop.py
+        pyinstaller --noconfirm --onedir --windowed --icon=logo.ico --add-data "../frontend/out;frontend/out" --add-data "../.env;." --collect-all faster_whisper --collect-all ctranslate2 --collect-all imageio_ffmpeg --collect-all uvicorn --collect-all fastapi --name "AutoCaps" desktop.py
         
     - name: Build Installer with Inno Setup
       run: |
@@ -101,7 +101,7 @@ jobs:
     - name: Build App with PyInstaller
       run: |
         cd backend
-        pyinstaller --noconfirm --onedir --windowed --icon=../frontend/public/logo.png --add-data "../frontend/out:frontend/out" --collect-all faster_whisper --collect-all ctranslate2 --collect-all imageio_ffmpeg --collect-all uvicorn --collect-all fastapi --name "AutoCaps" desktop.py
+        pyinstaller --noconfirm --onedir --windowed --icon=../frontend/public/logo.png --add-data "../frontend/out:frontend/out" --add-data "../.env:." --collect-all faster_whisper --collect-all ctranslate2 --collect-all imageio_ffmpeg --collect-all uvicorn --collect-all fastapi --name "AutoCaps" desktop.py
         
     - name: Package App
       run: |

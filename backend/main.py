@@ -25,7 +25,10 @@ from dotenv import load_dotenv
 from groq import Groq
 import sqlite3
 
-env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+if getattr(sys, 'frozen', False):
+    env_path = os.path.join(sys._MEIPASS, ".env")
+else:
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 load_dotenv(dotenv_path=env_path)
 load_dotenv()
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY", "missing_api_key"))
