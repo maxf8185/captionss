@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   // Remove output: 'export' to support Clerk and Server Actions
   images: {
     unoptimized: true,
