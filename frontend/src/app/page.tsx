@@ -618,6 +618,7 @@ export default function Home() {
         )}
 
         <div className="flex-1 flex justify-center items-center w-full h-full bg-black/40 rounded-3xl p-2 sm:p-4 min-h-0 min-w-0 relative">
+          <div className="w-full h-full flex justify-center items-center relative" style={{ containerType: 'size' }}>
           {(() => {
             // Determine effective aspect ratio for preview (respects user crop choice)
             const effectiveAspect = styles.aspect_ratio === "9:16" ? 9/16 : (videoAspect || 16/9);
@@ -626,15 +627,10 @@ export default function Home() {
             <div 
               className={`relative bg-black rounded-2xl border border-white/5 overflow-hidden shadow-2xl group backdrop-blur-md transition-all duration-300 ${!videoUrl ? 'w-full h-full aspect-video' : ''}`}
               style={videoUrl ? { 
-                aspectRatio: effectiveAspect,
-                // These CSS properties ensure the div perfectly fits inside the flex parent
-                // while preserving the aspect ratio.
-                maxWidth: '100%',
-                maxHeight: '100%',
-                flexShrink: 1,
-                // We provide a massive basis but constrain it, forcing it to shrink-wrap 
-                // to the exact max bounds while keeping aspect-ratio.
-                flexBasis: '10000px'
+                // We use container queries to perfectly compute the exact dimensions 
+                // to fit the parent without distorting or triggering Chromium flex bugs.
+                width: `min(100cqw, 100cqh * ${effectiveAspect})`,
+                height: `min(100cqh, 100cqw / ${effectiveAspect})`,
               } : {}}
             >
               {!videoUrl ? (
@@ -688,6 +684,7 @@ export default function Home() {
             );
           })()}
           </div>
+        </div>
         </Panel>
           
           {videoUrl && (
