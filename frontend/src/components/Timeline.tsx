@@ -35,6 +35,7 @@ function Playhead({ duration }: { duration: number }) {
         <div className="w-0.5 h-1.5 bg-white/50 rounded-full" />
       </div>
     </div>
+    </>
   );
 }
 
