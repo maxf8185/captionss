@@ -5,6 +5,28 @@ import { usePlayerStore } from '../store/playerStore';
 function Playhead({ duration }: { duration: number }) {
   const currentTime = usePlayerStore(state => state.currentTime);
   return (
+    <>
+    <style>{`
+      .word-input[data-active="true"] {
+        background-color: rgba(255, 229, 52, 0.9);
+        border-color: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 15px rgba(255, 229, 52, 0.3);
+        z-index: 40;
+        transform: scale(1.02);
+      }
+      .word-input[data-active="false"] {
+        background-color: rgba(255, 229, 52, 0.7);
+        border-color: rgba(255, 255, 255, 0.1);
+        z-index: 30;
+      }
+      .word-input[data-active="false"]:hover {
+        background-color: rgba(255, 229, 52, 0.8);
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+      .word-input[data-active="false"] .word-pointer {
+        display: none;
+      }
+    `}</style>
     <div 
       className="absolute top-0 bottom-0 w-[1px] bg-red-500 z-50 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-all duration-75"
       style={{ left: `${(currentTime / duration) * 100}%` }}
@@ -36,7 +58,7 @@ function OverlayBlock({ ov, duration }: { ov: any, duration: number }) {
 }
 
 function WordInput({ w, i, wIndex, duration }: { w: any, i: number, wIndex: number, duration: number }) {
-  const isActive = usePlayerStore(state => state.currentTime >= w.start && state.currentTime <= w.end);
+
   const [localWord, setLocalWord] = useState(w.word);
   
   // Sync if external changes (e.g. undo/redo)
@@ -68,19 +90,18 @@ function WordInput({ w, i, wIndex, duration }: { w: any, i: number, wIndex: numb
   
   return (
     <div 
-      className={`absolute top-20 bottom-2 rounded-lg flex items-center justify-center transition-all border shadow-sm ${isActive ? 'bg-[#ffe534]/90 border-white/50 shadow-[0_0_15px_rgba(255,229,52,0.3)] z-40 scale-[1.02]' : 'bg-[#ffe534]/70 border-white/10 hover:bg-[#ffe534]/80 hover:border-white/30 z-30'}`}
+      id={`word-${i}-${wIndex}`}
+      data-active="false"
+      className="word-input absolute top-20 bottom-2 rounded-lg flex items-center justify-center transition-all border shadow-sm"
       style={{ 
         left: `${startPct}%`, 
         width: `${Math.max(widthPct, (20 / (duration * 150)) * 100)}%`,
       }}
       onClick={(e) => e.stopPropagation()}
     >
-      {isActive && (
-        <>
-          <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#2563eb]" />
-          <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#2563eb]" />
-        </>
-      )}
+      <div className="word-pointer absolute -top-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#2563eb]" />
+      <div className="word-pointer absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-l-transparent border-r-transparent border-b-[#2563eb]" />
+
       <input 
         className="bg-transparent text-black font-semibold text-center w-full h-full focus:outline-none focus:bg-white/50 rounded-md px-1 text-xs sm:text-sm selection:bg-[#0ea5e9]/30 transition-colors"
         value={localWord}
@@ -106,6 +127,43 @@ export default function Timeline() {
 
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
+
+  useEffect(() => {
+    let lastActiveId: string | null = null;
+    return usePlayerStore.subscribe(
+      (state) => state.currentTime,
+      (currentTime) => {
+        const currentSegments = usePlayerStore.getState().segments;
+        let newActiveId: string | null = null;
+        
+        for (let i = 0; i < currentSegments.length; i++) {
+            const seg = currentSegments[i];
+            if (currentTime >= seg.start && currentTime <= seg.end) {
+                for (let j = 0; j < seg.words.length; j++) {
+                    const w = seg.words[j];
+                    if (currentTime >= w.start && currentTime <= w.end) {
+                        newActiveId = `word-${i}-${j}`;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+        
+        if (lastActiveId !== newActiveId) {
+            if (lastActiveId) {
+                const el = document.getElementById(lastActiveId);
+                if (el) el.setAttribute('data-active', 'false');
+            }
+            if (newActiveId) {
+                const el = document.getElementById(newActiveId);
+                if (el) el.setAttribute('data-active', 'true');
+            }
+            lastActiveId = newActiveId;
+        }
+      }
+    );
+  }, []);
 
   useEffect(() => {
     if (!waveformRef.current || !videoRef?.current) return;

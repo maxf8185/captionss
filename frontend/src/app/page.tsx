@@ -611,17 +611,31 @@ export default function Home() {
         
         {/* Error Banner */}
         {errorMsg && (
-          <div className="lg:col-span-12 bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl flex items-center justify-between">
+          <div className="lg:col-span-12 bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl flex items-center justify-between mb-4">
             <span>{errorMsg}</span>
             <button onClick={() => setErrorMsg(null)} className="opacity-50 hover:opacity-100">×</button>
           </div>
         )}
 
-        
-          <div className="flex-1 flex justify-center items-center w-full bg-black/40 rounded-3xl p-2 sm:p-4 min-h-0 relative">
+        <div className="flex-1 flex justify-center items-center w-full h-full bg-black/40 rounded-3xl p-2 sm:p-4 min-h-0 min-w-0 relative">
+          {(() => {
+            // Determine effective aspect ratio for preview (respects user crop choice)
+            const effectiveAspect = styles.aspect_ratio === "9:16" ? 9/16 : (videoAspect || 16/9);
+            
+            return (
             <div 
-              className={`relative bg-black rounded-2xl border border-white/5 overflow-hidden shadow-2xl group backdrop-blur-md transition-all duration-300 ${!videoUrl ? 'aspect-video w-full max-h-full' : ''}`}
-              style={videoAspect ? { aspectRatio: videoAspect, maxHeight: '100%', maxWidth: '100%' } : {}}
+              className={`relative bg-black rounded-2xl border border-white/5 overflow-hidden shadow-2xl group backdrop-blur-md transition-all duration-300 ${!videoUrl ? 'w-full h-full aspect-video' : ''}`}
+              style={videoUrl ? { 
+                aspectRatio: effectiveAspect,
+                // These CSS properties ensure the div perfectly fits inside the flex parent
+                // while preserving the aspect ratio.
+                maxWidth: '100%',
+                maxHeight: '100%',
+                flexShrink: 1,
+                // We provide a massive basis but constrain it, forcing it to shrink-wrap 
+                // to the exact max bounds while keeping aspect-ratio.
+                flexBasis: '10000px'
+              } : {}}
             >
               {!videoUrl ? (
                 <label className="flex flex-col items-center justify-center h-full gap-4 cursor-pointer p-12 text-slate-400 hover:text-white transition-colors">
@@ -639,7 +653,7 @@ export default function Home() {
                   <video 
                     ref={videoRef}
                     src={videoUrl} 
-                    className="w-full h-full object-contain"
+                    className={`w-full h-full ${styles.aspect_ratio === '9:16' && videoAspect > 1 ? 'object-cover' : 'object-contain'}`}
                     controls
                     controlsList="nodownload nofullscreen noremoteplayback"
                     disablePictureInPicture
@@ -671,6 +685,8 @@ export default function Home() {
                 </>
               )}
             </div>
+            );
+          })()}
           </div>
         </Panel>
           

@@ -690,7 +690,12 @@ async def export_video(req: ExportRequest):
     generate_ass_file(segments_dicts, req.styles, ass_path, video_width, video_height, face_bboxes)
     
     if req.save_path:
-        out_video_path = req.save_path
+        out_video_path = os.path.abspath(req.save_path)
+        # Security: Prevent overwriting critical system files by enforcing video extensions
+        if not out_video_path.lower().endswith(('.mp4', '.mov', '.mkv', '.webm', '.avi')):
+            raise HTTPException(status_code=400, detail="save_path must have a valid video extension.")
+        if "windows" in out_video_path.lower() or "system32" in out_video_path.lower():
+            raise HTTPException(status_code=400, detail="Cannot save to system directories.")
     else:
         out_video_path = os.path.join(OUTPUT_DIR, f"{req.video_id}_{uuid.uuid4().hex[:8]}_final.mp4")
     
