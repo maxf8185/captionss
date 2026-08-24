@@ -860,6 +860,7 @@ async def remove_silence(req: SilenceRemoveRequest):
             new_seg['start'] = valid_words[0]['start']
             new_seg['end'] = valid_words[-1]['end']
             new_seg['words'] = valid_words
+            new_seg['text'] = " ".join([w['word'] for w in valid_words])
             new_segments.append(new_seg)
 
     # 3. Cut video using FFmpeg filter_complex

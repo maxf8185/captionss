@@ -618,20 +618,20 @@ export default function Home() {
         )}
 
         <div className="flex-1 flex justify-center items-center w-full h-full bg-black/40 rounded-3xl p-2 sm:p-4 min-h-0 min-w-0 relative">
-          <div className="w-full h-full flex justify-center items-center relative" style={{ containerType: 'size' }}>
+          <div className="w-full h-full flex justify-center items-center relative [container-type:size]">
           {(() => {
             // Determine effective aspect ratio for preview (respects user crop choice)
             const effectiveAspect = styles.aspect_ratio === "9:16" ? 9/16 : (videoAspect || 16/9);
             
             return (
             <div 
-              className={`relative bg-black rounded-2xl border border-white/5 overflow-hidden shadow-2xl group backdrop-blur-md transition-all duration-300 ${!videoUrl ? 'w-full h-full aspect-video' : ''}`}
-              style={videoUrl ? { 
+              className={`relative bg-black rounded-2xl border border-white/5 overflow-hidden shadow-2xl group backdrop-blur-md transition-all duration-300`}
+              style={{ 
                 // We use container queries to perfectly compute the exact dimensions 
                 // to fit the parent without distorting or triggering Chromium flex bugs.
                 width: `min(100cqw, 100cqh * ${effectiveAspect})`,
                 height: `min(100cqh, 100cqw / ${effectiveAspect})`,
-              } : {}}
+              }}
             >
               {!videoUrl ? (
                 <label className="flex flex-col items-center justify-center h-full gap-4 cursor-pointer p-12 text-slate-400 hover:text-white transition-colors">
@@ -1087,16 +1087,24 @@ export default function Home() {
                       onChange={(e) => {
                         const newSegs = [...segments];
                         const newText = e.target.value;
-                        
+                        const oldWords = seg.words || [];
                         const wordsArr = newText.trim().split(/\s+/).filter(Boolean);
-                        const duration = seg.end - seg.start;
-                        const wordDuration = wordsArr.length > 0 ? duration / wordsArr.length : duration;
                         
-                        const newWords = wordsArr.map((w: any, wIdx: number) => ({
-                           word: w,
-                           start: seg.start + (wIdx * wordDuration),
-                           end: seg.start + ((wIdx + 1) * wordDuration)
-                        }));
+                        let newWords = [];
+                        if (wordsArr.length === oldWords.length) {
+                           newWords = wordsArr.map((w: any, wIdx: number) => ({
+                             ...oldWords[wIdx],
+                             word: w
+                           }));
+                        } else {
+                           const duration = seg.end - seg.start;
+                           const wordDuration = wordsArr.length > 0 ? duration / wordsArr.length : duration;
+                           newWords = wordsArr.map((w: any, wIdx: number) => ({
+                              word: w,
+                              start: seg.start + (wIdx * wordDuration),
+                              end: seg.start + ((wIdx + 1) * wordDuration)
+                           }));
+                        }
 
                         newSegs[idx] = {
                           ...newSegs[idx],
