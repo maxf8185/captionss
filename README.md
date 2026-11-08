@@ -29,6 +29,12 @@ It is a personal project that I develop and ship continuously: **59 releases** o
 - **Overlays**: place image overlays on the video for a chosen time range.
 - **High-quality export**: FFmpeg render with `libx264 -crf 18` (visually lossless) and a native "Save as" dialog on Windows.
 
+## Screenshots
+
+| Editor with word timeline and styling | Generation settings |
+|---|---|
+| ![Editor](docs/screenshot-editor.png) | ![Generation](docs/screenshot-generation.png) |
+
 ## How it works
 
 ```
