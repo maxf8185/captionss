@@ -20,7 +20,7 @@ It is a personal project that I develop and ship continuously: **59 releases** o
 
 ## Features
 
-- **Speech recognition**: Whisper large-v3 through the [Groq API](https://groq.com), with automatic language detection.
+- **Speech recognition**: Whisper large-v3 through the [Groq API](https://groq.com), with automatic language detection and optional translation of the subtitles to English.
 - **Interactive timeline editor**: click word blocks to fix text and timing, waveform and video frame thumbnails, undo / redo.
 - **Subtitle styling**: font (including custom font upload), size, colors, vertical position, words per line, maximum lines, presets.
 - **Vertical video support**: the preview adapts to the video's aspect ratio; export has no black borders.

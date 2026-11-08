@@ -355,6 +355,69 @@ async def upload_font(file: UploadFile = File(...)):
     
     return {"font_name": font_name, "url": f"/api/static_uploads/{font_filename}"}
 
+TRANSLATION_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+
+
+def translate_segments_to_english(segments: List[dict], model: Optional[str] = None, batch_size: int = 40) -> None:
+    """Translate subtitle segments to English in place.
+
+    Whisper's translation endpoint does not return word timestamps, so we keep the original
+    transcription timing and translate the text of each segment with an LLM instead. The
+    translated words are spread evenly across the segment's time range.
+
+    Groq retires models from time to time, so several candidates are tried in order
+    (override with the GROQ_TRANSLATE_MODEL environment variable).
+    """
+    candidates = [m for m in [model, os.environ.get("GROQ_TRANSLATE_MODEL")] if m] + TRANSLATION_MODELS
+    system_prompt = (
+        "You are a professional subtitle translator. Translate every string of the given JSON array "
+        "into natural, concise English suitable for subtitles. Keep names and brand terms unchanged. "
+        'Return a JSON object of the form {"translations": [...]} with exactly the same number of '
+        "items, in the same order. Never merge, split, skip or add items."
+    )
+
+    def translate_batch(texts: List[str]) -> List[str]:
+        last_error: Optional[Exception] = None
+        for candidate in candidates:
+            try:
+                response = groq_client.chat.completions.create(
+                    model=candidate,
+                    temperature=0,
+                    response_format={"type": "json_object"},
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": json.dumps(texts, ensure_ascii=False)},
+                    ],
+                )
+                data = json.loads(response.choices[0].message.content)
+                translations = data.get("translations")
+                if isinstance(translations, list) and len(translations) == len(texts):
+                    return [str(t).strip() for t in translations]
+                last_error = ValueError("The translation service returned an unexpected result.")
+            except Exception as e:  # model retired / unavailable / bad output: try the next one
+                last_error = e
+        raise RuntimeError(f"No translation model is available ({last_error})")
+
+    for offset in range(0, len(segments), batch_size):
+        batch = segments[offset:offset + batch_size]
+        texts = [(seg.get("text") or "").strip() for seg in batch]
+        if not any(texts):
+            continue
+        for seg, text in zip(batch, translate_batch(texts)):
+            words = text.split()
+            seg["text"] = text
+            if not words:
+                seg["words"] = []
+                continue
+            start = float(seg["start"])
+            duration = max(float(seg["end"]) - start, 0.01)
+            step = duration / len(words)
+            seg["words"] = [
+                {"word": w, "start": start + i * step, "end": start + (i + 1) * step}
+                for i, w in enumerate(words)
+            ]
+
+
 @app.post("/api/generate")
 async def generate_subtitles(req: GenerateRequest):
     if not is_valid_uuid(req.video_id):
@@ -540,6 +603,16 @@ async def generate_subtitles(req: GenerateRequest):
 
 
             
+        if req.task == "translate":
+            source_lang = str(getattr(transcription, "language", lang or "unknown")).lower()
+            if source_lang not in ("en", "english"):
+                yield json.dumps({"progress": 97}) + "\n"
+                try:
+                    await asyncio.to_thread(translate_segments_to_english, result_segments)
+                except Exception as e:
+                    yield json.dumps({"error": f"Translation failed: {str(e)}"}) + "\n"
+                    return
+
         detected_language = getattr(transcription, "language", lang or "unknown")
         yield json.dumps({"segments": result_segments, "detected_language": detected_language, "progress": 100}) + "\n"
         

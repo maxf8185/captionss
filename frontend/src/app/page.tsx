@@ -776,6 +776,19 @@ export default function Home() {
                 </div>
               </div>
 
+              <div className="flex items-center gap-3 bg-black/20 p-3 rounded-lg border border-white/5">
+                <input 
+                  type="checkbox" 
+                  id="translate_opt"
+                  checked={aiTask === "translate"}
+                  onChange={(e) => setAiTask(e.target.checked ? "translate" : "transcribe")}
+                  className="w-4 h-4 rounded bg-player-bg border-white/10 text-[#0ea5e9] focus:ring-[#0ea5e9] focus:ring-offset-gray-900 cursor-pointer"
+                />
+                <label htmlFor="translate_opt" className="text-sm text-text-primary cursor-pointer flex-1">
+                  Translate to English (Auto-Translation)
+                </label>
+              </div>
+
               <div>
                 <label className="text-sm text-text-secondary mb-2 flex items-center gap-2">
                   {t.vocab_context}
