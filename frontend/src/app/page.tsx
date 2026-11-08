@@ -770,23 +770,10 @@ export default function Home() {
                     onChange={(e) => setModelSize(e.target.value)}
                     className="w-full bg-player-bg border border-border-color rounded-lg p-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-[#0ea5e9] focus:border-transparent transition-all cursor-pointer appearance-none shadow-sm"
                   >
-                    <option value="whisper-large-v3-turbo">Швидко (Turbo)</option>
-                    <option value="whisper-large-v3">Найточніший (Large-v3)</option>
+                    <option value="whisper-large-v3-turbo">Fast (Turbo)</option>
+                    <option value="whisper-large-v3">Most accurate (Large-v3)</option>
                   </select>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3 bg-black/20 p-3 rounded-lg border border-white/5">
-                <input 
-                  type="checkbox" 
-                  id="translate_opt"
-                  checked={aiTask === "translate"}
-                  onChange={(e) => setAiTask(e.target.checked ? "translate" : "transcribe")}
-                  className="w-4 h-4 rounded bg-player-bg border-white/10 text-[#0ea5e9] focus:ring-[#0ea5e9] focus:ring-offset-gray-900 cursor-pointer"
-                />
-                <label htmlFor="translate_opt" className="text-sm text-text-primary cursor-pointer flex-1">
-                  Translate to English (Auto-Translation)
-                </label>
               </div>
 
               <div>
