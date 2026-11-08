@@ -12,10 +12,14 @@ class Api:
             result = window.create_file_dialog(
                 webview.SAVE_DIALOG, 
                 directory='', 
-                save_filename=default_filename
+                save_filename=default_filename,
+                file_types=('Video files (*.mp4;*.mov;*.mkv;*.webm)',)
             )
             if result and len(result) > 0:
-                return result[0]
+                path = result[0] if isinstance(result, (list, tuple)) else result
+                if not str(path).lower().endswith(('.mp4', '.mov', '.mkv', '.webm', '.avi')):
+                    path = str(path) + '.mp4'
+                return path
         except Exception as e:
             print("Error opening dialog:", e)
         return None
