@@ -57,7 +57,7 @@ It is a personal project that I develop and ship continuously: **59 releases** o
 
 Get the latest installer from the [Releases](../../releases) page.
 
-The installer does **not** include an API key. After installing, create a text file named `.env` containing one line, `GROQ_API_KEY=your_key` (get a free key at [console.groq.com](https://console.groq.com)), and save it in the `AutoCapsData` folder inside your user folder (`~/AutoCapsData/.env`) or next to `AutoCaps.exe`.
+The installer does **not** include an API key. After installing, create a text file named `.env` containing one line, `GROQ_API_KEY=your_key` (get a free key at [console.groq.com](https://console.groq.com)), and save it in the `AutoCapsData` folder inside your user folder (`~/AutoCapsData/.env`) or next to `AutoCaps.exe`. Make sure the file is named exactly `.env` (Windows can hide extensions and silently create `.env.txt`; that name is accepted too).
 
 ### Run from source (desktop mode)
 

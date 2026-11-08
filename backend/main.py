@@ -33,9 +33,11 @@ def _load_env_files():
     else:
         candidates.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
     candidates.append(os.path.join(os.path.expanduser("~"), "AutoCapsData", ".env"))
-    for path in candidates:
-        if os.path.exists(path):
-            load_dotenv(dotenv_path=path)
+    for base in candidates:
+        # Windows often hides file extensions, so ".env.txt" is a very common mistake
+        for path in (base, base + ".txt"):
+            if os.path.exists(path):
+                load_dotenv(dotenv_path=path, encoding="utf-8-sig")
 
 _load_env_files()
 load_dotenv()
