@@ -92,6 +92,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+_ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:8000", "http://127.0.0.1:8000"]
+
+
+@app.middleware("http")
+async def block_cross_site_writes(request, call_next):
+    """CSRF protection: reject state-changing requests that come from a foreign website.
+
+    Browsers always send an Origin header on cross-site POSTs. Allow it only if it matches
+    the configured origins or the host this server is being accessed on.
+    """
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        from urllib.parse import urlparse
+        origin = request.headers.get("origin")
+        if origin and origin not in _ALLOWED_ORIGINS and urlparse(origin).netloc != request.headers.get("host"):
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"detail": "Cross-site request blocked"}, status_code=403)
+    return await call_next(request)
+
 # Paths resolution for PyInstaller
 if getattr(sys, 'frozen', False):
     # Running in a PyInstaller bundle
@@ -287,10 +306,18 @@ class ExportRequest(BaseModel):
     overlays: List[OverlayConfig] = []
     user_id: Optional[str] = None
 
+def safe_ext(filename: Optional[str]) -> str:
+    """Return a safe file extension (letters/digits only) from a client-supplied filename."""
+    name = filename or ""
+    ext = name.rsplit(".", 1)[-1] if "." in name else ""
+    ext = re.sub(r"[^A-Za-z0-9]", "", ext)[:8]
+    return ext or "bin"
+
+
 @app.post("/api/upload")
 async def upload_video(file: UploadFile = File(...)):
     video_id = str(uuid.uuid4())
-    ext = file.filename.split(".")[-1]
+    ext = safe_ext(file.filename)
     file_path = os.path.join(UPLOAD_DIR, f"{video_id}.{ext}")
     
     with open(file_path, "wb") as buffer:
@@ -301,7 +328,7 @@ async def upload_video(file: UploadFile = File(...)):
 @app.post("/api/upload_overlay")
 async def upload_overlay(file: UploadFile = File(...)):
     overlay_id = str(uuid.uuid4())
-    ext = file.filename.split(".")[-1]
+    ext = safe_ext(file.filename)
     file_path = os.path.join(UPLOAD_DIR, f"overlay_{overlay_id}.{ext}")
     
     with open(file_path, "wb") as buffer:
@@ -312,7 +339,7 @@ async def upload_overlay(file: UploadFile = File(...)):
 @app.post("/api/upload_font")
 async def upload_font(file: UploadFile = File(...)):
     font_id = str(uuid.uuid4())
-    ext = file.filename.split(".")[-1]
+    ext = safe_ext(file.filename)
     font_filename = f"font_{font_id}.{ext}"
     file_path = os.path.join(FONTS_DIR, font_filename)
     
@@ -328,6 +355,8 @@ async def upload_font(file: UploadFile = File(...)):
 
 @app.post("/api/generate")
 async def generate_subtitles(req: GenerateRequest):
+    if not is_valid_uuid(req.video_id):
+        raise HTTPException(status_code=400, detail="Invalid video ID")
     video_path = None
     for file in os.listdir(UPLOAD_DIR):
         if file.startswith(req.video_id):
