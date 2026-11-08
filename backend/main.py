@@ -25,11 +25,19 @@ from dotenv import load_dotenv
 from groq import Groq
 import sqlite3
 
-if getattr(sys, 'frozen', False):
-    env_path = os.path.join(sys._MEIPASS, ".env")
-else:
-    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
-load_dotenv(dotenv_path=env_path)
+def _load_env_files():
+    """Load GROQ_API_KEY from a user-provided .env (never bundled into the app)."""
+    candidates = []
+    if getattr(sys, 'frozen', False):
+        candidates.append(os.path.join(os.path.dirname(sys.executable), ".env"))
+    else:
+        candidates.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
+    candidates.append(os.path.join(os.path.expanduser("~"), "AutoCapsData", ".env"))
+    for path in candidates:
+        if os.path.exists(path):
+            load_dotenv(dotenv_path=path)
+
+_load_env_files()
 load_dotenv()
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY", "missing_api_key"))
 
@@ -330,7 +338,9 @@ async def generate_subtitles(req: GenerateRequest):
         raise HTTPException(status_code=404, detail="Video not found")
         
     async def event_generator():
-        # Limit check removed as requested
+        if not os.environ.get("GROQ_API_KEY"):
+            yield json.dumps({"error": "GROQ_API_KEY is not set. Create a .env file with GROQ_API_KEY=... next to the app or in ~/AutoCapsData."}) + "\n"
+            return
         
         yield json.dumps({"progress": 1}) + "\n"
         await asyncio.sleep(0.1)

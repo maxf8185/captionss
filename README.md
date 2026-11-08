@@ -1,25 +1,113 @@
 <div align="center">
-  <img src="frontend/public/logo.png" alt="AutoCaps Logo" width="200" />
+  <img src="frontend/public/logo.png" alt="AutoCaps logo" width="160" />
+
   <h1>AutoCaps</h1>
-  <p><b>A powerful, offline-first desktop application for generating high-quality animated subtitles.</b></p>
+
+  <p><b>Turn a video into styled, editable subtitles and export the finished result.</b></p>
+
+  <p>
+    Python · FastAPI · TypeScript · Next.js · FFmpeg · Docker · GitHub Actions
+  </p>
 </div>
 
-## ✨ Features
-
-- **🚀 100% Free & Local Processing**: Uses the highly optimized `faster-whisper` AI model to transcribe audio locally on your machine. No cloud subscriptions or API keys required.
-- **📱 Perfect for Vertical Videos**: Fully supports TikTok, Instagram Reels, and YouTube Shorts. The player automatically adapts to the video aspect ratio and exports without annoying black borders.
-- **🧠 Smart Vocabulary & Context**: Add custom names, slang, or brand names to the "Context" field before generating, and the AI will accurately recognize them instead of guessing similar-sounding words.
-- **✂️ Interactive Timeline Editor**: Easily correct typos or timing by clicking directly on the word blocks along a beautiful horizontal timeline (with video frame thumbnails!).
-- **🎨 Deep Customization**: Control font size, colors, vertical position, words per line, and maximum lines to make your subtitles look exactly like top-tier social media content.
-- **🎬 Visually Lossless Export**: Powered by FFmpeg, the app exports your final video using high-quality encoding (`libx264 -crf 18`), maintaining the crisp quality of your original file.
-- **💾 Save As Dialogue**: Native Windows dialog to choose exactly where and under what name to save your final video.
-
-## 📥 Installation
-
-The easiest way to use AutoCaps is to download the pre-built Windows executable.
-1. Go to the [Releases](../../releases) page.
-2. Download `AutoCaps-Setup.exe`.
-3. Install and run! The app is fully self-contained.
-
 ---
-*Designed for content creators who demand quality and speed.*
+
+## Overview
+
+AutoCaps is a desktop and web application for creating subtitles for short-form video (TikTok, Instagram Reels, YouTube Shorts). You upload a video, the app transcribes the speech, you correct the text and timing on an interactive timeline, style the subtitles, and export a video with the subtitles rendered in.
+
+It is a personal project that I develop and ship continuously: **59 releases** of the Windows installer, built automatically with GitHub Actions.
+
+## Features
+
+- **Speech recognition**: Whisper large-v3 through the [Groq API](https://groq.com), with automatic language detection.
+- **Interactive timeline editor**: click word blocks to fix text and timing, waveform and video frame thumbnails, undo / redo.
+- **Subtitle styling**: font (including custom font upload), size, colors, vertical position, words per line, maximum lines, presets.
+- **Vertical video support**: the preview adapts to the video's aspect ratio; export has no black borders.
+- **Custom vocabulary**: add names, slang and brand terms in a "Context" field to improve recognition.
+- **Silence removal and speaker detection** (experimental).
+- **Overlays**: place image overlays on the video for a chosen time range.
+- **High-quality export**: FFmpeg render with `libx264 -crf 18` (visually lossless) and a native "Save as" dialog on Windows.
+
+## How it works
+
+```
+ Video upload ──► audio extraction (FFmpeg) ──► speech-to-text (Groq Whisper)
+                                                        │
+                                  words grouped into subtitle segments
+                                                        │
+        Next.js editor (timeline, styling) ◄────────────┘
+                     │
+                     └──► export: FFmpeg burns subtitles into the video
+```
+
+| Layer | Technology |
+|---|---|
+| Backend API | Python, FastAPI, SQLite |
+| Speech recognition | Groq Whisper API |
+| Media processing | FFmpeg (via imageio-ffmpeg), OpenCV, MediaPipe, librosa |
+| Frontend | TypeScript, Next.js, React, Zustand |
+| Desktop app | pywebview + PyInstaller, Inno Setup installer |
+| CI/CD | GitHub Actions (Windows build and release) |
+| Web deployment | Docker |
+
+## Getting started
+
+### Download (Windows)
+
+Get the latest installer from the [Releases](../../releases) page.
+
+The installer does **not** include an API key. After installing, create a text file named `.env` containing one line, `GROQ_API_KEY=your_key` (get a free key at [console.groq.com](https://console.groq.com)), and save it in the `AutoCapsData` folder inside your user folder (`~/AutoCapsData/.env`) or next to `AutoCaps.exe`.
+
+### Run from source (desktop mode)
+
+**Requirements:** Python 3.10+, Node.js 20+, and a free [Groq API key](https://console.groq.com).
+
+The desktop build removes the web-only authentication (Clerk) and exports the frontend as static files, which the Python backend then serves. `patch_desktop.py` does this by editing files in place, so use a throwaway checkout.
+
+```bash
+# 1. Configure the API key
+cp .env.example .env          # then set GROQ_API_KEY in .env
+
+# 2. Build the frontend in desktop mode
+cd frontend
+DESKTOP_BUILD=true python patch_desktop.py      # PowerShell: $env:DESKTOP_BUILD="true"; python patch_desktop.py
+npm install
+npm run build
+
+# 3. Start the app (backend serves the built frontend)
+cd ../backend
+pip install -r requirements.txt
+python desktop.py
+```
+
+The web version (Docker) additionally uses [Clerk](https://clerk.com) for sign-in and a per-user daily usage limit, and needs Clerk keys in `frontend/.env.local`.
+
+### Configuration
+
+| Variable | Description |
+|---|---|
+| `GROQ_API_KEY` | API key used for speech recognition. Read from `.env` in the project root, next to the executable, or in `~/AutoCapsData/.env`. Never commit it; `.env` is git-ignored. |
+
+## Project structure
+
+```
+backend/     FastAPI app (upload, transcription, export, silence removal, diarization)
+frontend/    Next.js editor (timeline, subtitle overlay, state store)
+build.py     Local desktop build script
+installer.iss  Inno Setup installer definition
+.github/workflows/build.yml   Automated Windows build and release
+```
+
+## Known limitations
+
+- Transcription requires an internet connection and a Groq API key.
+- Speaker detection and silence removal are experimental.
+- Automated tests are not written yet.
+
+## Author
+
+**Maksym Fizer**, Computer Science student at FIIT STU, Bratislava.
+GitHub: [@maxf8185](https://github.com/maxf8185)
+
+The project is built with the help of AI coding tools; I review, test and debug the code they produce.

@@ -1,7 +1,9 @@
 import os
 import requests
 
-API_KEY = "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"
+API_KEY = os.environ.get("GROQ_API_KEY", "")
+if not API_KEY:
+    raise SystemExit("Set the GROQ_API_KEY environment variable first.")
 
 print("Testing Groq API Connection...")
 

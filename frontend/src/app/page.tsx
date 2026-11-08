@@ -649,7 +649,7 @@ export default function Home() {
                   <video 
                     ref={videoRef}
                     src={videoUrl} 
-                    className={`w-full h-full ${styles.aspect_ratio === '9:16' && videoAspect > 1 ? 'object-cover' : 'object-contain'}`}
+                    className={`w-full h-full ${styles.aspect_ratio === '9:16' && (videoAspect ?? 0) > 1 ? 'object-cover' : 'object-contain'}`}
                     controls
                     controlsList="nodownload nofullscreen noremoteplayback"
                     disablePictureInPicture

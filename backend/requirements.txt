@@ -8,3 +8,7 @@ mediapipe
 opencv-python-headless
 pyinstaller
 imageio-ffmpeg
+numpy
+librosa
+scikit-learn
+Pillow

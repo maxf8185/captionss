@@ -132,9 +132,9 @@ export default function Timeline() {
   useEffect(() => {
     let lastActiveId: string | null = null;
     return usePlayerStore.subscribe(
-      (state) => state.currentTime,
-      (currentTime) => {
-        const currentSegments = usePlayerStore.getState().segments;
+      (state) => {
+        const currentTime = state.currentTime;
+        const currentSegments = state.segments;
         let newActiveId: string | null = null;
         
         for (let i = 0; i < currentSegments.length; i++) {
